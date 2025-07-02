@@ -1,6 +1,7 @@
 package com.example.attendanceTracker.controller;
 
 import java.util.List;
+import java.util.UUID;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -30,14 +31,14 @@ public class AttendanceController {
 
     @PostMapping("/checkin")
     @PreAuthorize("hasAnyRole('STAFF','ADMIN')")
-    public ResponseEntity<Attendance> checkIn(Authentication auth) {
-        User user = userService.findByUsername(auth.getName());
+    public ResponseEntity<Attendance> checkIn(@PathVariable UUID id) {
+        User user = userService.findById(id);
         return ResponseEntity.ok(attendanceService.checkIn(user));
     }
 
     @PostMapping("/checkout/{id}")
     @PreAuthorize("hasAnyRole('STAFF','ADMIN')")
-    public ResponseEntity<Attendance> checkOut(@PathVariable Long id) {
+    public ResponseEntity<Attendance> checkOut(@PathVariable UUID id) {
         return ResponseEntity.ok(attendanceService.checkOut(id));
     }
 
@@ -46,11 +47,11 @@ public class AttendanceController {
     public ResponseEntity<List<Attendance>> monthlyReport(
             @RequestParam int year,
             @RequestParam int month,
-            @RequestParam(required = false) String username,
+            @RequestParam(required = false) String email,
             Authentication auth) {
-        User user = userService.findByUsername(
+        User user = userService.findByEmail(
             auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"))
-                ? (username != null ? username : auth.getName())
+                ? (email != null ? email : auth.getName())
                 : auth.getName());
         return ResponseEntity.ok(attendanceService.getMonthlyReport(user, year, month));
     }
@@ -59,11 +60,11 @@ public class AttendanceController {
     @PreAuthorize("hasAnyRole('STAFF','ADMIN')")
     public ResponseEntity<List<Attendance>> yearlyReport(
             @RequestParam int year,
-            @RequestParam(required = false) String username,
+            @RequestParam(required = false) String email,
             Authentication auth) {
-        User user = userService.findByUsername(
+        User user = userService.findByEmail(
             auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"))
-                ? (username != null ? username : auth.getName())
+                ? (email != null ? email : auth.getName())
                 : auth.getName());
         return ResponseEntity.ok(attendanceService.getYearlyReport(user, year));
     }

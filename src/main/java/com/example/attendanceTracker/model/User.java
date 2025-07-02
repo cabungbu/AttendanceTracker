@@ -1,13 +1,13 @@
 package com.example.attendanceTracker.model;
 
 import java.time.LocalDate;
+import java.util.UUID;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
@@ -16,20 +16,13 @@ import jakarta.persistence.Table;
 public class User {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    @Column(unique = true, nullable = false)
-    private String sub; // Auth0 subject (auth0|...)
-
-    @Column(unique = true, nullable = false)
-    private String username;
+    @GeneratedValue
+    private UUID id;
 
     @Column(unique = true, nullable = false)
     private String email;
 
     private String name; 
-    private String password;
     private String avatarUrl;
     private LocalDate dateOfBirth;
 
@@ -38,16 +31,8 @@ public class User {
 
     // === GETTERS ===
 
-    public Long getId() {
+    public UUID getId() {
         return id;
-    }
-
-    public String getSub() {
-        return sub;
-    }
-
-    public String getUsername() {
-        return username;
     }
 
     public String getEmail() {
@@ -56,10 +41,6 @@ public class User {
 
     public String getName() {
         return name;
-    }
-
-    public String getPassword() {
-        return password;
     }
 
     public String getAvatarUrl() {
@@ -76,16 +57,8 @@ public class User {
 
     // === SETTERS ===
 
-    public void setId(Long id) {
+    public void setId(UUID id) {
         this.id = id;
-    }
-
-    public void setSub(String sub) {
-        this.sub = sub;
-    }
-
-    public void setUsername(String username) {
-        this.username = username;
     }
 
     public void setEmail(String email) {
@@ -94,10 +67,6 @@ public class User {
 
     public void setName(String name) {
         this.name = name;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
     }
 
     public void setAvatarUrl(String avatarUrl) {

@@ -1,18 +1,21 @@
 package com.example.attendanceTracker.controller;
 
 import java.util.List;
+import java.util.UUID;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.attendanceTracker.DTO.CreateUserDto;
 import com.example.attendanceTracker.model.User;
 import com.example.attendanceTracker.service.UserService;
 
@@ -26,26 +29,30 @@ public class UserController {
     }
 
     @GetMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('admin')")
     public ResponseEntity<List<User>> allUsers() {
         return ResponseEntity.ok(userService.findAll());
     }
 
-     @GetMapping("/me")
-    public User getCurrentUser(@AuthenticationPrincipal Jwt jwt) {
-        System.out.println("✅ /me endpoint called");
-        System.out.println("➡️  JWT sub: " + jwt.getSubject());
-        System.out.println("➡️  JWT email: " + jwt.getClaim("email"));
-        return userService.getOrCreateUserFromToken(jwt);
+    @PatchMapping("/{id}")
+    @PreAuthorize("hasRole('admin')")
+    public ResponseEntity<User> updateUser(@PathVariable UUID id, @RequestBody User updated ) {
+        User savedUser = userService.updateUser(id, updated);
+        return ResponseEntity.ok(savedUser);
     }
 
-    @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<User> updateUser(@PathVariable Long id, @RequestBody User updated ) {
+    @GetMapping("/{id}")
+    @PreAuthorize("hasRole('admin')")
+    public ResponseEntity<User> getUserById(@PathVariable UUID id) {
         User user = userService.findById(id);
-    user.setAvatarUrl(updated.getAvatarUrl());
-    user.setDateOfBirth(updated.getDateOfBirth());
-    user.setRole(updated.getRole());
-    return ResponseEntity.ok(userService.update(user));
+        return ResponseEntity.ok(user);
+    }
+
+    @PostMapping("/create")
+    @PreAuthorize("hasRole('admin')")
+    @ResponseStatus(HttpStatus.CREATED)
+    public ResponseEntity<User> createUser(@RequestBody CreateUserDto dto) {
+        User savedUser = userService.createUser(dto);
+        return ResponseEntity.ok(savedUser);
     }
 }

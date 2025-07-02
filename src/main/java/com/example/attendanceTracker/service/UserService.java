@@ -1,11 +1,12 @@
 package com.example.attendanceTracker.service;
 
 import java.util.List;
+import java.util.UUID;
 
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import com.example.attendanceTracker.DTO.CreateUserDto;
 import com.example.attendanceTracker.model.Role;
 import com.example.attendanceTracker.model.User;
 import com.example.attendanceTracker.repository.UserRepository;
@@ -15,7 +16,7 @@ import com.example.attendanceTracker.repository.UserRepository;
 public class UserService {
     private final UserRepository userRepository;
 
-    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public UserService(UserRepository userRepository) {
         this.userRepository = userRepository;
     }
 
@@ -23,16 +24,16 @@ public class UserService {
         return userRepository.findAll();
     }
 
-    public User findByUsername(String username) {
-        return userRepository.findByUsername(username).orElseThrow(() -> new RuntimeException("User not found"));
+    public User findByEmail(String email) {
+        return userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("User not found"));
     }
 
     public User update(User user) {
         return userRepository.save(user);
     }
 
-    public User findById(Long id) {
-    return userRepository.findById(id)
+    public User findById(UUID id) {
+        return userRepository.findById(id)
             .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
     }
 
@@ -41,30 +42,39 @@ public class UserService {
     }
 
 
-    public User getOrCreateUserFromToken(Jwt jwt) {
-        String sub = jwt.getSubject();
-        String email = jwt.getClaim("email");
-        String name = jwt.getClaim("name");
-        String picture = jwt.getClaim("picture");
-
-        @SuppressWarnings("unchecked")
-        List<String> roles = (List<String>) jwt.getClaims().get("https://attendance.com/roles");
-
-        return userRepository.findBySub(sub)
-            .orElseGet(() -> {
-                Role role = Role.STAFF; // mặc định
-                if (roles != null && roles.contains("ADMIN")) {
-                    role = Role.ADMIN;
-                }
-
-                User user = new User();
-                user.setSub(sub);
-                user.setEmail(email);
-                user.setName(name);
-                user.setAvatarUrl(picture);
-                user.setRole(role);
-                return userRepository.save(user);
+    @Transactional
+    public User createUser(CreateUserDto dto) {
+           userRepository.findByEmail(dto.getEmail())
+            .ifPresent(existing -> {
+                throw new IllegalArgumentException("Đã tồn tại người dùng với email: " + dto.getEmail());
             });
+        User user = new User();
+        user.setEmail(dto.getEmail());
+        user.setName(dto.getName());
+        user.setAvatarUrl(dto.getAvatarUrl());
+        user.setDateOfBirth(dto.getDateOfBirth());
+        user.setRole(Role.valueOf(dto.getRole().toLowerCase()));
+        return userRepository.save(user);
     }
 
+    @Transactional
+    public User updateUser(UUID id, User updated) {
+        User user = findById(id); // method đã có sẵn hoặc bạn thêm vào
+        if (updated.getName() != null) {
+            user.setName(updated.getName());
+        }
+
+        if (updated.getAvatarUrl() != null) {
+            user.setAvatarUrl(updated.getAvatarUrl());
+        }
+
+        if (updated.getDateOfBirth() != null) {
+            user.setDateOfBirth(updated.getDateOfBirth());
+        }
+
+        if (updated.getRole() != null) {
+            user.setRole(updated.getRole());
+        }
+        return userRepository.save(user);
+    }
 }

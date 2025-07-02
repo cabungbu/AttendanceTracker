@@ -1,6 +1,7 @@
 package com.example.attendanceTracker.model;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -16,7 +17,7 @@ public class Attendance {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private UUID id;
 
     @ManyToOne(optional = false)
     @JoinColumn(name = "user_id")
@@ -27,7 +28,7 @@ public class Attendance {
 
     // === GETTERS ===
 
-    public Long getId() {
+    public UUID getId() {
         return id;
     }
 
@@ -45,7 +46,7 @@ public class Attendance {
 
     // === SETTERS ===
 
-    public void setId(Long id) {
+    public void setId(UUID id) {
         this.id = id;
     }
 

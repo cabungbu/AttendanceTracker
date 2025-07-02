@@ -5,6 +5,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 
@@ -27,7 +28,7 @@ public class AttendanceService {
         return attendanceRepository.save(record);
     }
 
-    public Attendance checkOut(Long id) {
+    public Attendance checkOut(UUID id) {
         Attendance record = attendanceRepository.findById(id).orElseThrow(() -> new RuntimeException("Record not found"));
         record.setCheckOut(LocalDateTime.now());
         return attendanceRepository.save(record);
