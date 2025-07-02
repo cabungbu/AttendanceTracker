@@ -1,4 +1,4 @@
-package com.example.model;
+package com.example.attendanceTracker.model;
 
 import java.time.LocalDateTime;
 

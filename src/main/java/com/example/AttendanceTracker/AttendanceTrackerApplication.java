@@ -1,4 +1,4 @@
-package com.example.AttendanceTracker;
+package com.example.attendanceTracker;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -7,7 +7,9 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 public class AttendanceTrackerApplication {
 	
 	public static void main(String[] args) {
+		
 		SpringApplication.run(AttendanceTrackerApplication.class, args);
+		System.out.println("🔍 DB_HOST = " + System.getenv("DB_HOST"));
 	}
-
 }
+

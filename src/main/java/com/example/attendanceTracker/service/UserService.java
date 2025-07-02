@@ -1,15 +1,14 @@
-package com.example.service;
+package com.example.attendanceTracker.service;
 
 import java.util.List;
 
-import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 
-import com.example.model.Role;
-import com.example.model.User;
-import com.example.repository.UserRepository;
+import com.example.attendanceTracker.model.Role;
+import com.example.attendanceTracker.model.User;
+import com.example.attendanceTracker.repository.UserRepository;
 
 
 @Service
@@ -41,16 +40,15 @@ public class UserService {
         return userRepository.save(user);
     }
 
-   
-   public User getOrCreateUserFromToken(Authentication authentication) {
-        JwtAuthenticationToken jwt = (JwtAuthenticationToken) authentication;
-        String sub = jwt.getToken().getSubject();
-        String email = (String) jwt.getToken().getClaims().get("email");
-        String name = (String) jwt.getToken().getClaims().get("name");
-        String picture = (String) jwt.getToken().getClaims().get("picture");
+
+    public User getOrCreateUserFromToken(Jwt jwt) {
+        String sub = jwt.getSubject();
+        String email = jwt.getClaim("email");
+        String name = jwt.getClaim("name");
+        String picture = jwt.getClaim("picture");
 
         @SuppressWarnings("unchecked")
-        List<String> roles = (List<String>) jwt.getToken().getClaims().get("roles");
+        List<String> roles = (List<String>) jwt.getClaims().get("https://attendance.com/roles");
 
         return userRepository.findBySub(sub)
             .orElseGet(() -> {
@@ -68,4 +66,5 @@ public class UserService {
                 return userRepository.save(user);
             });
     }
+
 }

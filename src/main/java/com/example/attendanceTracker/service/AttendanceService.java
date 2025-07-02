@@ -1,4 +1,4 @@
-package com.example.service;
+package com.example.attendanceTracker.service;
 
 
 import java.time.LocalDate;
@@ -8,9 +8,9 @@ import java.util.List;
 
 import org.springframework.stereotype.Service;
 
-import com.example.model.Attendance;
-import com.example.model.User;
-import com.example.repository.AttendanceRepository;
+import com.example.attendanceTracker.model.Attendance;
+import com.example.attendanceTracker.model.User;
+import com.example.attendanceTracker.repository.AttendanceRepository;
 
 @Service
 public class AttendanceService {

@@ -1,4 +1,4 @@
-package com.example.controller;
+package com.example.attendanceTracker.controller;
 
 import java.util.List;
 
@@ -12,10 +12,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.example.model.Attendance;
-import com.example.model.User;
-import com.example.service.AttendanceService;
-import com.example.service.UserService;
+import com.example.attendanceTracker.model.Attendance;
+import com.example.attendanceTracker.model.User;
+import com.example.attendanceTracker.service.AttendanceService;
+import com.example.attendanceTracker.service.UserService;
 
 @RestController
 @RequestMapping("/attendance")
