@@ -3,6 +3,8 @@ package com.example.attendanceTracker.service;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
@@ -38,6 +40,10 @@ public class UserService {
         return userRepository.findAll();
     }
 
+    public Page<User> listUsersPagination(Pageable pageable) {
+        return userRepository.findAll(pageable);
+    }
+
     public User findByEmail(String email) {
          return userRepository.findByEmail(email)
             .orElseThrow(() ->
@@ -60,11 +66,6 @@ public class UserService {
             );
     }
 
-    public User saveProfile(User user) {
-        return userRepository.save(user);
-    }
-
-
     @Transactional
     public User createUser(CreateUserDto dto) {
         userRepository.findByEmail(dto.getEmail()).ifPresent(existing -> {
@@ -78,27 +79,48 @@ public class UserService {
         user.setName(dto.getName());
         user.setAvatarUrl(dto.getAvatarUrl());
         user.setDateOfBirth(dto.getDateOfBirth());
-        user.setRole(Role.valueOf(dto.getRole().toLowerCase()));
+        user.setPosition(dto.getPosition());
+        user.setRole(Role.valueOf(dto.getRole().toUpperCase()));
+        user.setIsDeleted(dto.isDeleted());
+        user.setDeletedDate(dto.getDeletedDate());
+        user.setPhoneNumber(dto.getPhoneNumber());
+        user.setAddress(dto.getAddress());
+        user.setGender(dto.getGender());
         return userRepository.save(user);
     }
 
     @Transactional
     public User updateUser(UUID id, User updated) {
         User user = findById(id); // method đã có sẵn hoặc bạn thêm vào
-        if (updated.getName() != null) {
+         if (updated.getName() != null) {
             user.setName(updated.getName());
         }
-
         if (updated.getAvatarUrl() != null) {
             user.setAvatarUrl(updated.getAvatarUrl());
         }
-
         if (updated.getDateOfBirth() != null) {
             user.setDateOfBirth(updated.getDateOfBirth());
         }
-
+        if (updated.getPosition() != null) {
+            user.setPosition(updated.getPosition());
+        }
         if (updated.getRole() != null) {
             user.setRole(updated.getRole());
+        }
+        if (updated.getIsDeleted()) {
+            user.setIsDeleted(true);
+            if (updated.getDeletedDate() != null) {
+                user.setDeletedDate(updated.getDeletedDate());
+            }
+        }
+        if (updated.getPhoneNumber() != null) {
+            user.setPhoneNumber(updated.getPhoneNumber());
+        }
+        if (updated.getAddress() != null) {
+            user.setAddress(updated.getAddress());
+        }
+        if (updated.getGender() != null) {
+            user.setGender(updated.getGender());
         }
         return userRepository.save(user);
     }

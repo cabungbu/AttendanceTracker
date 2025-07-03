@@ -3,6 +3,8 @@ package com.example.attendanceTracker.controller;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -34,25 +36,33 @@ public class UserController {
 
     
     @GetMapping("/me")
-public ResponseEntity<User> getMe(Authentication authentication) {    
-    if (authentication instanceof JwtAuthenticationToken) {
-        JwtAuthenticationToken jwtAuth = (JwtAuthenticationToken) authentication;
-        Jwt jwt = jwtAuth.getToken();
-        try {
-            User user = userService.getUserByJwt(jwt);
-            return ResponseEntity.ok(user);
-        } catch (Exception e) {
-            throw e;
+    public ResponseEntity<User> getMe(Authentication authentication) {    
+        if (authentication instanceof JwtAuthenticationToken) {
+            JwtAuthenticationToken jwtAuth = (JwtAuthenticationToken) authentication;
+            Jwt jwt = jwtAuth.getToken();
+            try {
+                User user = userService.getUserByJwt(jwt);
+                return ResponseEntity.ok(user);
+            } catch (Exception e) {
+                throw e;
+            }
         }
+        
+        throw new RuntimeException("Authentication is not JWT type");
     }
-    
-    throw new RuntimeException("Authentication is not JWT type");
-}
 
-    @GetMapping
+    @GetMapping("/all")
     @PreAuthorize("hasRole('admin')")
     public ResponseEntity<List<User>> allUsers() {
         return ResponseEntity.ok(userService.findAll());
+    }
+
+    //example: /users?page=0&size=10&sort=name,asc
+    @GetMapping
+    @PreAuthorize("hasRole('admin')")
+    public ResponseEntity<Page<User>> allUsers(Pageable pageable) {
+        Page<User> page = userService.listUsersPagination(pageable);
+        return ResponseEntity.ok(page);
     }
 
     @PatchMapping("/{id}")
