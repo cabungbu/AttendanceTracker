@@ -3,8 +3,11 @@ package com.example.attendanceTracker.service;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.example.attendanceTracker.DTO.CreateUserDto;
 import com.example.attendanceTracker.model.Role;
@@ -20,12 +23,29 @@ public class UserService {
         this.userRepository = userRepository;
     }
 
+    public User getUserByJwt(Jwt jwt) {
+        String email = jwt.getClaimAsString("email");
+        return userRepository.findByEmail(email)
+            .orElseThrow(() ->
+            new ResponseStatusException(
+                HttpStatus.NOT_FOUND,
+                "Không tìm thấy user với email: " + email
+            )
+        );
+    }
+
     public List<User> findAll() {
         return userRepository.findAll();
     }
 
     public User findByEmail(String email) {
-        return userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("User not found"));
+         return userRepository.findByEmail(email)
+            .orElseThrow(() ->
+            new ResponseStatusException(
+                HttpStatus.NOT_FOUND,
+                "Không tìm thấy user với email: " + email
+            )
+        );
     }
 
     public User update(User user) {
@@ -34,7 +54,10 @@ public class UserService {
 
     public User findById(UUID id) {
         return userRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
+            .orElseThrow(() ->  new ResponseStatusException(
+                HttpStatus.NOT_FOUND,
+                "Không tìm thấy user với id: " + id)
+            );
     }
 
     public User saveProfile(User user) {
@@ -44,10 +67,12 @@ public class UserService {
 
     @Transactional
     public User createUser(CreateUserDto dto) {
-           userRepository.findByEmail(dto.getEmail())
-            .ifPresent(existing -> {
-                throw new IllegalArgumentException("Đã tồn tại người dùng với email: " + dto.getEmail());
-            });
+        userRepository.findByEmail(dto.getEmail()).ifPresent(existing -> {
+            throw new ResponseStatusException(
+            HttpStatus.CONFLICT,
+            "Đã tồn tại người dùng với email: " + dto.getEmail()
+            );
+        });
         User user = new User();
         user.setEmail(dto.getEmail());
         user.setName(dto.getName());

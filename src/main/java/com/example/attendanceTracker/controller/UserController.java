@@ -6,6 +6,9 @@ import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -19,6 +22,7 @@ import com.example.attendanceTracker.DTO.CreateUserDto;
 import com.example.attendanceTracker.model.User;
 import com.example.attendanceTracker.service.UserService;
 
+
 @RestController
 @RequestMapping("/users")
 public class UserController {
@@ -27,6 +31,23 @@ public class UserController {
     public UserController(UserService userService) {
         this.userService = userService;
     }
+
+    
+    @GetMapping("/me")
+public ResponseEntity<User> getMe(Authentication authentication) {    
+    if (authentication instanceof JwtAuthenticationToken) {
+        JwtAuthenticationToken jwtAuth = (JwtAuthenticationToken) authentication;
+        Jwt jwt = jwtAuth.getToken();
+        try {
+            User user = userService.getUserByJwt(jwt);
+            return ResponseEntity.ok(user);
+        } catch (Exception e) {
+            throw e;
+        }
+    }
+    
+    throw new RuntimeException("Authentication is not JWT type");
+}
 
     @GetMapping
     @PreAuthorize("hasRole('admin')")
