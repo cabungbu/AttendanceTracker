@@ -1,4 +1,4 @@
-package com.example.AttendanceTracker.util;
+package com.example.attendanceTracker.util;
 
 import java.security.SecureRandom;
 

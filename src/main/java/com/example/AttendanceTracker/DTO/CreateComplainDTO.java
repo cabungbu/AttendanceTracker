@@ -1,4 +1,4 @@
-package com.example.AttendanceTracker.DTO;
+package com.example.attendanceTracker.DTO;
 
 import java.util.UUID;
 

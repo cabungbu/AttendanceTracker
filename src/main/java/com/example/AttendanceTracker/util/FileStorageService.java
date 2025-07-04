@@ -1,4 +1,4 @@
-package com.example.AttendanceTracker.util;
+package com.example.attendanceTracker.util;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;

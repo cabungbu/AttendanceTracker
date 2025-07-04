@@ -1,4 +1,4 @@
-package com.example.AttendanceTracker.controller;
+package com.example.attendanceTracker.controller;
 
 import java.util.List;
 import java.util.UUID;

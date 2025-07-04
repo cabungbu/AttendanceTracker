@@ -1,4 +1,4 @@
-package com.example.AttendanceTracker.model;
+package com.example.attendanceTracker.model;
 
 import java.time.LocalDate;
 import java.util.UUID;

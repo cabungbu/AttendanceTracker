@@ -1,4 +1,4 @@
-package com.example.AttendanceTracker.service;
+package com.example.attendanceTracker.service;
 
 import java.time.LocalDate;
 import java.util.List;

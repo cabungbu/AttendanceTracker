@@ -1,4 +1,4 @@
-package com.example.AttendanceTracker.service;
+package com.example.attendanceTracker.service;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -7,14 +7,14 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.example.AttendanceTracker.DTO.CreateComplainDTO;
-import com.example.AttendanceTracker.DTO.UpdateComplainStatusDTO;
-import com.example.AttendanceTracker.model.Attendance;
-import com.example.AttendanceTracker.model.Complain;
-import com.example.AttendanceTracker.model.StatusComplain;
-import com.example.AttendanceTracker.model.User;
-import com.example.AttendanceTracker.repository.AttendanceRepository;
-import com.example.AttendanceTracker.repository.ComplainRepository;
+import com.example.attendanceTracker.DTO.CreateComplainDTO;
+import com.example.attendanceTracker.DTO.UpdateComplainStatusDTO;
+import com.example.attendanceTracker.model.Attendance;
+import com.example.attendanceTracker.model.Complain;
+import com.example.attendanceTracker.model.StatusComplain;
+import com.example.attendanceTracker.model.User;
+import com.example.attendanceTracker.repository.AttendanceRepository;
+import com.example.attendanceTracker.repository.ComplainRepository;
 
 @Service
 public class ComplainService {
