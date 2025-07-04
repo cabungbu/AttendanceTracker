@@ -1,4 +1,4 @@
-package com.example.attendanceTracker.config;
+package com.example.AttendanceTracker.config;
 
 import java.util.List;
 

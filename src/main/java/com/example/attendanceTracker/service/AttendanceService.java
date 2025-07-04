@@ -1,36 +1,76 @@
-package com.example.attendanceTracker.service;
+package com.example.AttendanceTracker.service;
 
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import com.example.attendanceTracker.model.Attendance;
-import com.example.attendanceTracker.model.User;
-import com.example.attendanceTracker.repository.AttendanceRepository;
+import com.example.AttendanceTracker.DTO.AttendanceReportDTO;
+import com.example.AttendanceTracker.DTO.CheckInDTO;
+import com.example.AttendanceTracker.DTO.CheckOutDTO;
+import com.example.AttendanceTracker.model.Attendance;
+import com.example.AttendanceTracker.model.User;
+import com.example.AttendanceTracker.repository.AttendanceRepository;
+import com.example.AttendanceTracker.repository.ComplainRepository;
+import com.example.AttendanceTracker.repository.UserRepository;
+import com.example.AttendanceTracker.util.FileStorageService;
 
 @Service
 public class AttendanceService {
     private final AttendanceRepository attendanceRepository;
+    private final UserRepository userRepository;
+    private final ComplainRepository complainRepository;
+    private final FileStorageService fileStorageService;
 
-    public AttendanceService(AttendanceRepository attendanceRepository) {
+    public AttendanceService(
+            AttendanceRepository attendanceRepository, 
+            UserRepository userRepository,
+            ComplainRepository complainRepository,
+            FileStorageService fileStorageService) {
         this.attendanceRepository = attendanceRepository;
+        this.userRepository = userRepository;
+        this.complainRepository = complainRepository;
+        this.fileStorageService = fileStorageService;
     }
 
-    public Attendance checkIn(User user) {
+    @Transactional
+    public Attendance checkIn(User user, CheckInDTO checkInDto) {
         Attendance record = new Attendance();
         record.setUser(user);
         record.setCheckIn(LocalDateTime.now());
+        
+        // Xử lý tải lên ảnh checkin nếu có
+        if (checkInDto.getCheckInImage() != null && !checkInDto.getCheckInImage().isEmpty()) {
+            String imageUrl = fileStorageService.storeFile(checkInDto.getCheckInImage(), 
+                    "checkin_" + user.getId() + "_" + System.currentTimeMillis());
+            record.setCheckInImageUrl(imageUrl);
+        }
+        
         return attendanceRepository.save(record);
     }
 
-    public Attendance checkOut(UUID id) {
-        Attendance record = attendanceRepository.findById(id).orElseThrow(() -> new RuntimeException("Record not found"));
+    @Transactional
+    public Attendance checkOut(UUID id, CheckOutDTO checkOutDto) {
+        Attendance record = attendanceRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Record not found"));
+        
         record.setCheckOut(LocalDateTime.now());
+        
+        // Xử lý tải lên ảnh checkout nếu có
+        if (checkOutDto.getCheckOutImage() != null && !checkOutDto.getCheckOutImage().isEmpty()) {
+            String imageUrl = fileStorageService.storeFile(checkOutDto.getCheckOutImage(), 
+                    "checkout_" + record.getUser().getId() + "_" + System.currentTimeMillis());
+            record.setCheckOutImageUrl(imageUrl);
+        }
+        
         return attendanceRepository.save(record);
     }
 
@@ -44,5 +84,162 @@ public class AttendanceService {
         LocalDateTime start = LocalDateTime.of(LocalDate.of(year, 1, 1), LocalTime.MIN);
         LocalDateTime end = LocalDateTime.of(LocalDate.of(year, 12, 31), LocalTime.MAX);
         return attendanceRepository.findByUserAndCheckInBetween(user, start, end);
+    }
+    
+    public Attendance findById(UUID id) {
+        return attendanceRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Attendance record not found"));
+    }
+    
+    public List<Attendance> getAllAttendance(LocalDate from, LocalDate to) {
+        if (from != null && to != null) {
+            LocalDateTime fromTime = from.atStartOfDay();
+            LocalDateTime toTime = to.atTime(LocalTime.MAX);
+            return attendanceRepository.findByCheckInBetween(fromTime, toTime);
+        } else if (from != null) {
+            LocalDateTime fromTime = from.atStartOfDay();
+            return attendanceRepository.findByCheckInAfter(fromTime);
+        } else if (to != null) {
+            LocalDateTime toTime = to.atTime(LocalTime.MAX);
+            return attendanceRepository.findByCheckInBefore(toTime);
+        } else {
+            return attendanceRepository.findAll();
+        }
+    }
+    
+    public List<Attendance> filterAttendance(Boolean checkedIn, Boolean checkedOut, UUID userId) {
+        List<Attendance> result = new ArrayList<>();
+        
+        if (userId != null) {
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+            result = attendanceRepository.findByUser(user);
+        } else {
+            result = attendanceRepository.findAll();
+        }
+        
+        // Lọc theo trạng thái checkedIn/checkedOut
+        if (checkedIn != null || checkedOut != null) {
+            return result.stream()
+                    .filter(a -> {
+                        boolean match = true;
+                        if (checkedIn != null) {
+                            match = match && (a.getCheckIn() != null) == checkedIn;
+                        }
+                        if (checkedOut != null) {
+                            match = match && (a.getCheckOut() != null) == checkedOut;
+                        }
+                        return match;
+                    })
+                    .collect(Collectors.toList());
+        }
+        
+        return result;
+    }
+    
+    public AttendanceReportDTO getMonthlySummary(UUID userId, int year, int month) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        
+        List<Attendance> attendances = getMonthlyReport(user, year, month);
+        
+        AttendanceReportDTO report = new AttendanceReportDTO();
+        report.setUserId(userId);
+        report.setUserName(user.getName());
+        report.setUserEmail(user.getEmail());
+        report.setYear(year);
+        report.setMonth(month);
+        
+        // Tính số ngày trong tháng
+        LocalDate date = LocalDate.of(year, month, 1);
+        int daysInMonth = date.lengthOfMonth();
+        report.setTotalDays(daysInMonth);
+        
+        // Tính số ngày có mặt (có bản ghi attendance)
+        report.setPresentDays(attendances.size());
+        
+        // Tính số ngày vắng mặt
+        report.setAbsentDays(daysInMonth - report.getPresentDays());
+        
+        // Tính tổng số giờ làm việc
+        double totalHours = 0;
+        for (Attendance attendance : attendances) {
+            if (attendance.getCheckIn() != null && attendance.getCheckOut() != null) {
+                double hours = ChronoUnit.MINUTES.between(attendance.getCheckIn(), attendance.getCheckOut()) / 60.0;
+                totalHours += hours;
+            }
+        }
+        report.setTotalHours(totalHours);
+        
+        // Thêm danh sách các bản ghi attendance
+        report.setAttendanceRecords(attendances);
+        
+        return report;
+    }
+    
+    public List<Attendance> getAttendanceWithComplaints() {
+        return complainRepository.findAll().stream()
+                .map(complain -> complain.getAttendance())
+                .distinct()
+                .collect(Collectors.toList());
+    }
+    
+    @Transactional
+    public Attendance updateAttendance(UUID id, Attendance updatedAttendance) {
+        Attendance existingAttendance = attendanceRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Attendance record not found"));
+        
+        // Chỉ cập nhật các trường cần thiết, không thay đổi ID và user
+        if (updatedAttendance.getCheckIn() != null) {
+            existingAttendance.setCheckIn(updatedAttendance.getCheckIn());
+        }
+        
+        if (updatedAttendance.getCheckOut() != null) {
+            existingAttendance.setCheckOut(updatedAttendance.getCheckOut());
+        }
+        
+        // Cập nhật các trường khác nếu có
+        return attendanceRepository.save(existingAttendance);
+    }
+    
+    // Các phương thức hỗ trợ cho export báo cáo (hiện đã vô hiệu hóa)
+    /**
+     * @deprecated This method is no longer used as the Excel export functionality has been removed
+     */
+    @Deprecated
+    public List<Attendance> getMonthlyAttendanceForUser(UUID userId, int year, int month) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        return getMonthlyReport(user, year, month);
+    }
+    
+    /**
+     * @deprecated This method is no longer used as the Excel export functionality has been removed
+     */
+    @Deprecated
+    public List<Attendance> getYearlyAttendanceForUser(UUID userId, int year) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        return getYearlyReport(user, year);
+    }
+    
+    /**
+     * @deprecated This method is no longer used as the Excel export functionality has been removed
+     */
+    @Deprecated
+    public List<Attendance> getMonthlyAttendanceForAllUsers(int year, int month) {
+        LocalDateTime start = LocalDateTime.of(LocalDate.of(year, month, 1), LocalTime.MIN);
+        LocalDateTime end = start.plusMonths(1).minusSeconds(1);
+        return attendanceRepository.findByCheckInBetween(start, end);
+    }
+    
+    /**
+     * @deprecated This method is no longer used as the Excel export functionality has been removed
+     */
+    @Deprecated
+    public List<Attendance> getYearlyAttendanceForAllUsers(int year) {
+        LocalDateTime start = LocalDateTime.of(LocalDate.of(year, 1, 1), LocalTime.MIN);
+        LocalDateTime end = LocalDateTime.of(LocalDate.of(year, 12, 31), LocalTime.MAX);
+        return attendanceRepository.findByCheckInBetween(start, end);
     }
 }

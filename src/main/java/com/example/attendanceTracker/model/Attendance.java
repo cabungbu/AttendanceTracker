@@ -1,4 +1,4 @@
-package com.example.attendanceTracker.model;
+package com.example.AttendanceTracker.model;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -24,6 +24,9 @@ public class Attendance {
 
     private LocalDateTime checkIn;
     private LocalDateTime checkOut;
+    
+    private String checkInImageUrl;
+    private String checkOutImageUrl;
 
     // === GETTERS ===
 
@@ -42,6 +45,14 @@ public class Attendance {
     public LocalDateTime getCheckOut() {
         return checkOut;
     }
+    
+    public String getCheckInImageUrl() {
+        return checkInImageUrl;
+    }
+    
+    public String getCheckOutImageUrl() {
+        return checkOutImageUrl;
+    }
 
     // === SETTERS ===
 
@@ -59,5 +70,13 @@ public class Attendance {
 
     public void setCheckOut(LocalDateTime checkOut) {
         this.checkOut = checkOut;
+    }
+    
+    public void setCheckInImageUrl(String checkInImageUrl) {
+        this.checkInImageUrl = checkInImageUrl;
+    }
+    
+    public void setCheckOutImageUrl(String checkOutImageUrl) {
+        this.checkOutImageUrl = checkOutImageUrl;
     }
 }

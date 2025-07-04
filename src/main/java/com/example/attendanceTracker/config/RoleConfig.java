@@ -1,4 +1,4 @@
-package com.example.attendanceTracker.config;
+package com.example.AttendanceTracker.config;
 
 import java.io.IOException;
 import java.util.List;
@@ -15,8 +15,8 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.web.server.ResponseStatusException;
 
-import com.example.attendanceTracker.model.User;
-import com.example.attendanceTracker.repository.UserRepository;
+import com.example.AttendanceTracker.model.User;
+import com.example.AttendanceTracker.repository.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import jakarta.servlet.ServletException;

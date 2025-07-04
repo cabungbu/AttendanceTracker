@@ -1,8 +1,8 @@
-package com.example.attendanceTracker.DTO;
+package com.example.AttendanceTracker.DTO;
 
 import org.springframework.format.annotation.DateTimeFormat;
 
-import com.example.attendanceTracker.model.Gender;
+import com.example.AttendanceTracker.model.Gender;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;

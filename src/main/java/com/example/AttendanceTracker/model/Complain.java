@@ -32,10 +32,6 @@ public class Complain {
     private StatusComplain status = StatusComplain.PENDING;
     
     private LocalDateTime createdAt = LocalDateTime.now();
-    
-    private LocalDateTime updatedAt;
-    
-    private String adminResponse;
 
     // Getters and Setters
     public UUID getId() {
@@ -68,7 +64,6 @@ public class Complain {
 
     public void setStatus(StatusComplain status) {
         this.status = status;
-        this.updatedAt = LocalDateTime.now();
     }
 
     public LocalDateTime getCreatedAt() {
@@ -77,21 +72,5 @@ public class Complain {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
-    }
-
-    public LocalDateTime getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(LocalDateTime updatedAt) {
-        this.updatedAt = updatedAt;
-    }
-
-    public String getAdminResponse() {
-        return adminResponse;
-    }
-
-    public void setAdminResponse(String adminResponse) {
-        this.adminResponse = adminResponse;
     }
 }

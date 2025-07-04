@@ -66,8 +66,6 @@ public class ComplainService {
                 .orElseThrow(() -> new RuntimeException("Complain not found"));
         
         complain.setStatus(dto.getStatus());
-        complain.setAdminResponse(dto.getAdminResponse());
-        complain.setUpdatedAt(LocalDateTime.now());
         
         return complainRepository.save(complain);
     }

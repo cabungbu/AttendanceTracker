@@ -1,4 +1,4 @@
-package com.example.attendanceTracker.service;
+package com.example.AttendanceTracker.service;
 
 import java.util.List;
 import java.util.UUID;
@@ -11,10 +11,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import com.example.attendanceTracker.DTO.CreateUserDto;
-import com.example.attendanceTracker.model.Role;
-import com.example.attendanceTracker.model.User;
-import com.example.attendanceTracker.repository.UserRepository;
+import com.example.AttendanceTracker.DTO.CreateUserDto;
+import com.example.AttendanceTracker.model.Role;
+import com.example.AttendanceTracker.model.User;
+import com.example.AttendanceTracker.repository.UserRepository;
 
 
 @Service

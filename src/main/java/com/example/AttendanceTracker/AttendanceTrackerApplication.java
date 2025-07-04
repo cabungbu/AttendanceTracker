@@ -1,4 +1,4 @@
-package com.example.attendanceTracker;
+package com.example.AttendanceTracker;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;

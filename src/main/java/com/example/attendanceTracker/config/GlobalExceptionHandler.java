@@ -1,4 +1,4 @@
-package com.example.attendanceTracker.config;
+package com.example.AttendanceTracker.config;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;

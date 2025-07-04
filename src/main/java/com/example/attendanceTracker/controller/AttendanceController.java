@@ -1,14 +1,14 @@
-package com.example.attendanceTracker.controller;
+package com.example.AttendanceTracker.controller;
 
-import java.util.List;
-import java.util.UUID;
 import java.time.LocalDate;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.format.annotation.DateTimeFormat;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -22,38 +22,52 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.example.attendanceTracker.model.Attendance;
-import com.example.attendanceTracker.model.User;
-import com.example.attendanceTracker.service.AttendanceService;
-import com.example.attendanceTracker.service.UserService;
-import com.example.attendanceTracker.DTO.AttendanceReportDTO;
-import com.example.attendanceTracker.DTO.CheckInDTO;
-import com.example.attendanceTracker.DTO.CheckOutDTO;
-import com.example.attendanceTracker.utils.ExportUtil;
+import com.example.AttendanceTracker.DTO.AttendanceReportDTO;
+import com.example.AttendanceTracker.DTO.CheckInDTO;
+import com.example.AttendanceTracker.DTO.CheckOutDTO;
+import com.example.AttendanceTracker.model.Attendance;
+import com.example.AttendanceTracker.model.User;
+import com.example.AttendanceTracker.service.AttendanceService;
+import com.example.AttendanceTracker.service.UserService;
 
 @RestController
 @RequestMapping("/attendance")
 public class AttendanceController {
     private final AttendanceService attendanceService;
     private final UserService userService;
-    private final ExportUtil exportUtil;
+    
+    @Value("${supabase.url}")
+    private String supabaseUrl;
+    
+    @Value("${supabase.key}")
+    private String supabaseKey;
+    
+    @Value("${supabase.bucket}")
+    private String supabaseBucket;
 
-    public AttendanceController(AttendanceService attendanceService, UserService userService, ExportUtil exportUtil) {
+    public AttendanceController(AttendanceService attendanceService, UserService userService) {
         this.attendanceService = attendanceService;
         this.userService = userService;
-        this.exportUtil = exportUtil;
     }
 
     @PostMapping("/checkin")
     @PreAuthorize("hasAnyRole('STAFF','ADMIN')")
-    public ResponseEntity<Attendance> checkIn(Authentication auth, @RequestBody CheckInDTO checkInDto) {
+    public ResponseEntity<Attendance> checkIn(
+            Authentication auth, 
+            @RequestParam(value = "checkInImage", required = false) MultipartFile checkInImage) {
         User user = userService.findByEmail(auth.getName());
+        CheckInDTO checkInDto = new CheckInDTO();
+        checkInDto.setCheckInImage(checkInImage);
         return ResponseEntity.ok(attendanceService.checkIn(user, checkInDto));
     }
 
     @PostMapping("/checkout/{id}")
     @PreAuthorize("hasAnyRole('STAFF','ADMIN')")
-    public ResponseEntity<Attendance> checkOut(@PathVariable UUID id, @RequestBody CheckOutDTO checkOutDto) {
+    public ResponseEntity<Attendance> checkOut(
+            @PathVariable UUID id, 
+            @RequestParam(value = "checkOutImage", required = false) MultipartFile checkOutImage) {
+        CheckOutDTO checkOutDto = new CheckOutDTO();
+        checkOutDto.setCheckOutImage(checkOutImage);
         return ResponseEntity.ok(attendanceService.checkOut(id, checkOutDto));
     }
 
@@ -132,26 +146,17 @@ public class AttendanceController {
         return ResponseEntity.ok(attendanceService.getMonthlySummary(userIdToUse, year, month));
     }
     
-    // Export dữ liệu attendance ra Excel
-    @GetMapping("/export/excel")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<byte[]> exportToExcel(
-            @RequestParam int year,
-            @RequestParam(required = false) Integer month,
-            @RequestParam(required = false) UUID userId) {
+    // // Export dữ liệu attendance ra Excel
+    // @GetMapping("/export/excel")
+    // @PreAuthorize("hasRole('ADMIN')")
+    // public ResponseEntity<String> exportToExcel(
+    //         @RequestParam int year,
+    //         @RequestParam(required = false) Integer month,
+    //         @RequestParam(required = false) UUID userId) {
         
-        byte[] excelContent = exportUtil.exportAttendanceToExcel(year, month, userId);
-        
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
-        String filename = "attendance_report_" + year;
-        if (month != null) filename += "_" + month;
-        if (userId != null) filename += "_user_" + userId;
-        filename += ".xlsx";
-        headers.setContentDispositionFormData("attachment", filename);
-        
-        return new ResponseEntity<>(excelContent, headers, HttpStatus.OK);
-    }
+    //     // Trả về thông báo tạm thời do chức năng xuất Excel đã bị vô hiệu hóa
+    //     return ResponseEntity.ok("Excel export functionality has been removed due to dependency issues with Apache POI. Please contact the administrator for assistance.");
+    // }
     
     // Lấy danh sách attendance có khiếu nại
     @GetMapping("/with-complaints")
@@ -167,5 +172,35 @@ public class AttendanceController {
             @PathVariable UUID id,
             @RequestBody Attendance attendance) {
         return ResponseEntity.ok(attendanceService.updateAttendance(id, attendance));
+    }
+    
+    // Endpoint để kiểm tra cấu hình Supabase
+    @GetMapping("/test-supabase-config")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Map<String, String>> testSupabaseConfig() {
+        try {
+            // Lấy thông tin từ application.properties
+            String url = supabaseUrl != null ? supabaseUrl : "Not configured";
+            String bucket = supabaseBucket != null ? supabaseBucket : "Not configured";
+            
+            // Che giấu key vì lý do bảo mật
+            String maskedKey = "Not configured";
+            if (supabaseKey != null && supabaseKey.length() > 15) {
+                maskedKey = supabaseKey.substring(0, 10) + "..." + 
+                            supabaseKey.substring(supabaseKey.length() - 5);
+            }
+            
+            Map<String, String> config = new HashMap<>();
+            config.put("supabaseUrl", url);
+            config.put("supabaseBucket", bucket);
+            config.put("supabaseKey", maskedKey);
+            config.put("configSource", "From application.properties using .env values");
+            
+            return ResponseEntity.ok(config);
+        } catch (Exception e) {
+            Map<String, String> errorConfig = new HashMap<>();
+            errorConfig.put("error", "Error retrieving Supabase configuration: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorConfig);
+        }
     }
 }
