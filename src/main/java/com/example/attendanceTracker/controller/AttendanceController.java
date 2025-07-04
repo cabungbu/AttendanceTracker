@@ -162,12 +162,10 @@ public class AttendanceController {
         return ResponseEntity.ok(attendanceService.updateAttendance(id, attendance));
     }
     
-    // Endpoint để kiểm tra cấu hình Supabase
     @GetMapping("/test-supabase-config")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Map<String, String>> testSupabaseConfig() {
         try {
-            // Lấy thông tin từ application.properties
             String url = supabaseUrl != null ? supabaseUrl : "Not configured";
             String bucket = supabaseBucket != null ? supabaseBucket : "Not configured";
             

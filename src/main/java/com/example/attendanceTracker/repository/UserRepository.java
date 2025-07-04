@@ -14,4 +14,7 @@ import com.example.AttendanceTracker.model.User;
 public interface UserRepository extends JpaRepository<User, UUID> {
     Optional<User> findByEmail(String email);
     Page<User> findAll(Pageable pageable);
+    Page<User> findByNameContainingIgnoreCaseOrEmailContainingIgnoreCase(
+        String name, String email, Pageable pageable
+    );
 }

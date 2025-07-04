@@ -11,18 +11,21 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.example.AttendanceTracker.DTO.CreateUserDto;
-import com.example.AttendanceTracker.model.User;
-import com.example.AttendanceTracker.service.UserService;
+import com.example.attendanceTracker.DTO.CreateUserDto;
+import com.example.attendanceTracker.DTO.UpdateUserDTO;
+import com.example.attendanceTracker.model.User;
+import com.example.attendanceTracker.service.UserService;
 
 
 @RestController
@@ -51,23 +54,34 @@ public class UserController {
         throw new RuntimeException("Authentication is not JWT type");
     }
 
+    @PatchMapping("/me")
+    public ResponseEntity<User> updateMyProfile(
+        JwtAuthenticationToken auth,
+        @RequestBody UpdateUserDTO updated) {
+        Jwt jwt = auth.getToken();
+        String email = jwt.getClaimAsString("email");
+        User user = userService.findByEmail(email);
+        User savedUser = userService.updateUser(user.getId(), updated);
+    return ResponseEntity.ok(savedUser);
+}
+
     @GetMapping("/all")
     @PreAuthorize("hasRole('admin')")
     public ResponseEntity<List<User>> allUsers() {
         return ResponseEntity.ok(userService.findAll());
     }
 
-    //example: /users?page=0&size=10&sort=name,asc
+    //example: users?page=0&size=10&sort=name,asc&searchkey=abc
     @GetMapping
     @PreAuthorize("hasRole('admin')")
-    public ResponseEntity<Page<User>> allUsers(Pageable pageable) {
-        Page<User> page = userService.listUsersPagination(pageable);
+    public ResponseEntity<Page<User>> allUsers(Pageable pageable, @RequestParam(value = "searchkey", required = false) String search) {
+        Page<User> page = userService.listUsers(pageable, search);
         return ResponseEntity.ok(page);
     }
 
     @PatchMapping("/{id}")
     @PreAuthorize("hasRole('admin')")
-    public ResponseEntity<User> updateUser(@PathVariable UUID id, @RequestBody User updated ) {
+    public ResponseEntity<User> updateUser(@PathVariable UUID id, @RequestBody UpdateUserDTO updated ) {
         User savedUser = userService.updateUser(id, updated);
         return ResponseEntity.ok(savedUser);
     }
@@ -85,5 +99,12 @@ public class UserController {
     public ResponseEntity<User> createUser(@RequestBody CreateUserDto dto) {
         User savedUser = userService.createUser(dto);
         return ResponseEntity.ok(savedUser);
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('admin')")
+    public ResponseEntity<Void> deleteUserById(@PathVariable UUID id) {
+        userService.deleteUser(id);
+        return ResponseEntity.noContent().build();
     }
 }
