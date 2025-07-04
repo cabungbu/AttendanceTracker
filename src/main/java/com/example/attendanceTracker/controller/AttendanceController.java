@@ -146,18 +146,6 @@ public class AttendanceController {
         return ResponseEntity.ok(attendanceService.getMonthlySummary(userIdToUse, year, month));
     }
     
-    // // Export dữ liệu attendance ra Excel
-    // @GetMapping("/export/excel")
-    // @PreAuthorize("hasRole('ADMIN')")
-    // public ResponseEntity<String> exportToExcel(
-    //         @RequestParam int year,
-    //         @RequestParam(required = false) Integer month,
-    //         @RequestParam(required = false) UUID userId) {
-        
-    //     // Trả về thông báo tạm thời do chức năng xuất Excel đã bị vô hiệu hóa
-    //     return ResponseEntity.ok("Excel export functionality has been removed due to dependency issues with Apache POI. Please contact the administrator for assistance.");
-    // }
-    
     // Lấy danh sách attendance có khiếu nại
     @GetMapping("/with-complaints")
     @PreAuthorize("hasRole('ADMIN')")
