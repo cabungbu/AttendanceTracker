@@ -1,6 +1,6 @@
-package com.example.AttendanceTracker.DTO;
+package com.example.attendanceTracker.DTO;
 
-import com.example.AttendanceTracker.model.User;
+import com.example.attendanceTracker.model.User;
 
 public class CreateUserResponse {
     private final User user;

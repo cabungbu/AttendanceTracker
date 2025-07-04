@@ -1,4 +1,4 @@
-package com.example.AttendanceTracker.DTO;
+package com.example.attendanceTracker.DTO;
 
 import org.springframework.web.multipart.MultipartFile;
 

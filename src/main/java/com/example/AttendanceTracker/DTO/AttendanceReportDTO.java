@@ -1,9 +1,9 @@
-package com.example.AttendanceTracker.DTO;
+package com.example.attendanceTracker.DTO;
 
 import java.util.List;
 import java.util.UUID;
 
-import com.example.AttendanceTracker.model.Attendance;
+import com.example.attendanceTracker.model.Attendance;
 
 public class AttendanceReportDTO {
     private UUID userId;

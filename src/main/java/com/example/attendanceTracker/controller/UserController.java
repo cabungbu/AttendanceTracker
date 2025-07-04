@@ -1,4 +1,4 @@
-package com.example.AttendanceTracker.controller;
+package com.example.attendanceTracker.controller;
 
 import java.util.List;
 import java.util.UUID;
@@ -20,9 +20,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.example.AttendanceTracker.DTO.CreateUserDto;
-import com.example.AttendanceTracker.model.User;
-import com.example.AttendanceTracker.service.UserService;
+import com.example.attendanceTracker.DTO.CreateUserDto;
+import com.example.attendanceTracker.model.User;
+import com.example.attendanceTracker.service.UserService;
 
 
 @RestController

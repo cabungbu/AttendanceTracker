@@ -1,4 +1,4 @@
-package com.example.AttendanceTracker.service;
+package com.example.attendanceTracker.service;
 
 
 import java.time.LocalDate;
@@ -13,15 +13,15 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.example.AttendanceTracker.DTO.AttendanceReportDTO;
-import com.example.AttendanceTracker.DTO.CheckInDTO;
-import com.example.AttendanceTracker.DTO.CheckOutDTO;
-import com.example.AttendanceTracker.model.Attendance;
-import com.example.AttendanceTracker.model.User;
-import com.example.AttendanceTracker.repository.AttendanceRepository;
-import com.example.AttendanceTracker.repository.ComplainRepository;
-import com.example.AttendanceTracker.repository.UserRepository;
-import com.example.AttendanceTracker.util.FileStorageService;
+import com.example.attendanceTracker.DTO.AttendanceReportDTO;
+import com.example.attendanceTracker.DTO.CheckInDTO;
+import com.example.attendanceTracker.DTO.CheckOutDTO;
+import com.example.attendanceTracker.model.Attendance;
+import com.example.attendanceTracker.model.User;
+import com.example.attendanceTracker.repository.AttendanceRepository;
+import com.example.attendanceTracker.repository.ComplainRepository;
+import com.example.attendanceTracker.repository.UserRepository;
+import com.example.attendanceTracker.util.FileStorageService;
 
 @Service
 public class AttendanceService {

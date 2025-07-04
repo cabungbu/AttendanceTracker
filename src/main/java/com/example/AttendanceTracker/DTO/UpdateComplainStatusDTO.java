@@ -1,8 +1,8 @@
-package com.example.AttendanceTracker.DTO;
+package com.example.attendanceTracker.DTO;
 
 import jakarta.validation.constraints.NotNull;
 
-import com.example.AttendanceTracker.model.StatusComplain;
+import com.example.attendanceTracker.model.StatusComplain;
 
 public class UpdateComplainStatusDTO {
     

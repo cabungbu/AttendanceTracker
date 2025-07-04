@@ -1,4 +1,4 @@
-package com.example.AttendanceTracker.repository;
+package com.example.attendanceTracker.repository;
 
 import java.util.List;
 import java.util.UUID;
@@ -6,10 +6,10 @@ import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-import com.example.AttendanceTracker.model.Attendance;
-import com.example.AttendanceTracker.model.Complain;
-import com.example.AttendanceTracker.model.StatusComplain;
-import com.example.AttendanceTracker.model.User;
+import com.example.attendanceTracker.model.Attendance;
+import com.example.attendanceTracker.model.Complain;
+import com.example.attendanceTracker.model.StatusComplain;
+import com.example.attendanceTracker.model.User;
 
 @Repository
 public interface ComplainRepository extends JpaRepository<Complain, UUID> {
