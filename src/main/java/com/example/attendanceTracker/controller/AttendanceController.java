@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -30,12 +31,14 @@ import com.example.attendanceTracker.model.Attendance;
 import com.example.attendanceTracker.model.User;
 import com.example.attendanceTracker.service.AttendanceService;
 import com.example.attendanceTracker.service.UserService;
+import com.example.attendanceTracker.util.FileStorageService;
 
 @RestController
 @RequestMapping("/attendance")
 public class AttendanceController {
     private final AttendanceService attendanceService;
     private final UserService userService;
+    private final FileStorageService fileStorageService;
     
     @Value("${supabase.url}")
     private String supabaseUrl;
@@ -46,9 +49,10 @@ public class AttendanceController {
     @Value("${supabase.bucket}")
     private String supabaseBucket;
 
-    public AttendanceController(AttendanceService attendanceService, UserService userService) {
+    public AttendanceController(AttendanceService attendanceService, UserService userService, FileStorageService fileStorageService) {
         this.attendanceService = attendanceService;
         this.userService = userService;
+        this.fileStorageService = fileStorageService;
     }
 
     private String extractEmailFromAuth(Authentication auth) {
@@ -60,24 +64,56 @@ public class AttendanceController {
 
     @PostMapping("/checkin")
     @PreAuthorize("hasAnyRole('staff','admin')")
-    public ResponseEntity<Attendance> checkIn(
+    public ResponseEntity<?> checkIn(
             Authentication auth, 
             @RequestParam(value = "checkInImage", required = false) MultipartFile checkInImage) {
-        String email = extractEmailFromAuth(auth);
-        User user = userService.findByEmail(email);
-        CheckInDTO checkInDto = new CheckInDTO();
-        checkInDto.setCheckInImage(checkInImage);
-        return ResponseEntity.ok(attendanceService.checkIn(user, checkInDto));
+        try {
+            String email = extractEmailFromAuth(auth);
+            User user = userService.findByEmail(email);
+            CheckInDTO checkInDto = new CheckInDTO();
+            checkInDto.setCheckInImage(checkInImage);
+            
+            Attendance attendance = attendanceService.checkIn(user, checkInDto);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "SUCCESS");
+            response.put("message", "Điểm danh thành công");
+            response.put("attendance", attendance);
+            
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("status", "ERROR");
+            errorResponse.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(errorResponse);
+        }
     }
 
-    @PostMapping("/checkout/{id}")
+    @PostMapping("/checkout")
     @PreAuthorize("hasAnyRole('staff','admin')")
-    public ResponseEntity<Attendance> checkOut(
-            @PathVariable UUID id, 
+    public ResponseEntity<?> checkOut(
+            Authentication auth,
             @RequestParam(value = "checkOutImage", required = false) MultipartFile checkOutImage) {
-        CheckOutDTO checkOutDto = new CheckOutDTO();
-        checkOutDto.setCheckOutImage(checkOutImage);
-        return ResponseEntity.ok(attendanceService.checkOut(id, checkOutDto));
+        try {
+            String email = extractEmailFromAuth(auth);
+            User user = userService.findByEmail(email);
+            CheckOutDTO checkOutDto = new CheckOutDTO();
+            checkOutDto.setCheckOutImage(checkOutImage);
+            
+            Attendance attendance = attendanceService.checkOut(user, checkOutDto);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "SUCCESS");
+            response.put("message", "Kết thúc ca làm việc thành công");
+            response.put("attendance", attendance);
+            
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("status", "ERROR");
+            errorResponse.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(errorResponse);
+        }
     }
 
     @GetMapping("/report/monthly")
@@ -198,11 +234,83 @@ public class AttendanceController {
             config.put("supabaseKey", maskedKey);
             config.put("configSource", "From application.properties using .env values");
             
+            // Test bucket accessibility
+            try {
+                String listEndpoint = supabaseUrl + "/storage/v1/object/list/" + supabaseBucket;
+                
+                org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+                headers.set("apikey", supabaseKey);
+                headers.set("Authorization", "Bearer " + supabaseKey);
+                headers.setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
+                
+                // Fix: Add required 'prefix' property to request body
+                String requestBody = "{\"prefix\": \"\", \"limit\": 10}";
+                org.springframework.http.HttpEntity<String> requestEntity = 
+                    new org.springframework.http.HttpEntity<>(requestBody, headers);
+                
+                org.springframework.web.client.RestTemplate restTemplate = 
+                    new org.springframework.web.client.RestTemplate();
+                
+                org.springframework.http.ResponseEntity<String> response = restTemplate.exchange(
+                    listEndpoint,
+                    org.springframework.http.HttpMethod.POST,
+                    requestEntity,
+                    String.class);
+                
+                config.put("bucketTest", "SUCCESS - Status: " + response.getStatusCode());
+                config.put("bucketResponse", response.getBody());
+                
+            } catch (Exception bucketError) {
+                config.put("bucketTest", "FAILED");
+                config.put("bucketError", bucketError.getMessage());
+                
+                // More specific error handling
+                if (bucketError.getMessage().contains("404")) {
+                    config.put("bucketErrorType", "BUCKET_NOT_FOUND - Tạo bucket 'attendencetracker' trong Supabase Dashboard");
+                } else if (bucketError.getMessage().contains("401") || bucketError.getMessage().contains("403")) {
+                    config.put("bucketErrorType", "PERMISSION_DENIED - Sử dụng service_role key hoặc thiết lập RLS policies");
+                } else {
+                    config.put("bucketErrorType", "UNKNOWN_ERROR");
+                }
+            }
+            
             return ResponseEntity.ok(config);
         } catch (Exception e) {
             Map<String, String> errorConfig = new HashMap<>();
-            errorConfig.put("error", "Error retrieving Supabase configuration: " + e.getMessage());
+            errorConfig.put("error", "Lỗi khi lấy cấu hình Supabase: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorConfig);
         }
+    }
+
+    @GetMapping("/status")
+    @PreAuthorize("hasAnyRole('staff','admin')")
+    public ResponseEntity<Map<String, Object>> getTodayStatus(Authentication auth) {
+        String email = extractEmailFromAuth(auth);
+        User user = userService.findByEmail(email);
+        
+        Map<String, Object> response = new HashMap<>();
+        
+        Optional<Attendance> todayAttendance = attendanceService.getTodayAttendance(user);
+        
+        if (todayAttendance.isPresent()) {
+            Attendance attendance = todayAttendance.get();
+            response.put("hasCheckedIn", true);
+            response.put("checkInTime", attendance.getCheckIn());
+            response.put("hasCheckedOut", attendance.getCheckOut() != null);
+            if (attendance.getCheckOut() != null) {
+                response.put("checkOutTime", attendance.getCheckOut());
+            }
+            response.put("canCheckOut", attendanceService.canCheckOutToday(user));
+            response.put("attendance", attendance);
+        } else {
+            response.put("hasCheckedIn", false);
+            response.put("hasCheckedOut", false);
+            response.put("canCheckIn", true);
+            response.put("canCheckOut", false);
+        }
+        
+        response.put("canCheckIn", attendanceService.canCheckInToday(user));
+        
+        return ResponseEntity.ok(response);
     }
 }

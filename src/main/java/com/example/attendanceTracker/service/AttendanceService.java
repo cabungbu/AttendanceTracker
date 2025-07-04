@@ -7,6 +7,7 @@ import java.time.LocalTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -43,6 +44,18 @@ public class AttendanceService {
 
     @Transactional
     public Attendance checkIn(User user, CheckInDTO checkInDto) {
+        // Check if user has already checked in today
+        LocalDate today = LocalDate.now();
+        LocalDateTime startOfDay = today.atStartOfDay();
+        LocalDateTime endOfDay = today.atTime(LocalTime.MAX);
+        
+        Optional<Attendance> existingRecord = attendanceRepository.findByUserAndDate(user, startOfDay, endOfDay);
+        
+        if (existingRecord.isPresent()) {
+            throw new RuntimeException("Bạn đã điểm danh hôm nay rồi. Thời gian điểm danh: " + 
+                existingRecord.get().getCheckIn().toLocalTime());
+        }
+        
         Attendance record = new Attendance();
         record.setUser(user);
         record.setCheckIn(LocalDateTime.now());
@@ -57,10 +70,21 @@ public class AttendanceService {
         return attendanceRepository.save(record);
     }
 
+    // New checkout method that automatically finds today's record
     @Transactional
-    public Attendance checkOut(UUID id, CheckOutDTO checkOutDto) {
-        Attendance record = attendanceRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Record not found"));
+    public Attendance checkOut(User user, CheckOutDTO checkOutDto) {
+        // Find today's attendance record for this user
+        LocalDate today = LocalDate.now();
+        LocalDateTime startOfDay = today.atStartOfDay();
+        LocalDateTime endOfDay = today.atTime(LocalTime.MAX);
+        
+        Optional<Attendance> todayRecord = attendanceRepository.findByUserAndDate(user, startOfDay, endOfDay);
+        
+        if (todayRecord.isEmpty()) {
+            throw new RuntimeException("Không tìm thấy bản ghi điểm danh cho hôm nay. Vui lòng điểm danh trước.");
+        }
+        
+        Attendance record = todayRecord.get();
         
         record.setCheckOut(LocalDateTime.now());
         
@@ -72,6 +96,26 @@ public class AttendanceService {
         }
         
         return attendanceRepository.save(record);
+    }
+
+    // Get today's attendance status for a user
+    public Optional<Attendance> getTodayAttendance(User user) {
+        LocalDate today = LocalDate.now();
+        LocalDateTime startOfDay = today.atStartOfDay();
+        LocalDateTime endOfDay = today.atTime(LocalTime.MAX);
+        
+        return attendanceRepository.findByUserAndDate(user, startOfDay, endOfDay);
+    }
+    
+    // Check if user can check in today
+    public boolean canCheckInToday(User user) {
+        return getTodayAttendance(user).isEmpty();
+    }
+    
+    // Check if user can check out today
+    public boolean canCheckOutToday(User user) {
+        Optional<Attendance> todayRecord = getTodayAttendance(user);
+        return todayRecord.isPresent() && todayRecord.get().getCheckOut() == null;
     }
 
     public List<Attendance> getMonthlyReport(User user, int year, int month) {
@@ -88,7 +132,7 @@ public class AttendanceService {
     
     public Attendance findById(UUID id) {
         return attendanceRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Attendance record not found"));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy bản ghi điểm danh"));
     }
     
     public List<Attendance> getAllAttendance(LocalDate from, LocalDate to) {
@@ -112,7 +156,7 @@ public class AttendanceService {
         
         if (userId != null) {
             User user = userRepository.findById(userId)
-                    .orElseThrow(() -> new RuntimeException("User not found"));
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
             result = attendanceRepository.findByUser(user);
         } else {
             result = attendanceRepository.findAll();
@@ -139,7 +183,7 @@ public class AttendanceService {
     
     public AttendanceReportDTO getMonthlySummary(UUID userId, int year, int month) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
         
         List<Attendance> attendances = getMonthlyReport(user, year, month);
         
@@ -187,7 +231,7 @@ public class AttendanceService {
     @Transactional
     public Attendance updateAttendance(UUID id, Attendance updatedAttendance) {
         Attendance existingAttendance = attendanceRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Attendance record not found"));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy bản ghi điểm danh"));
         
         // Chỉ cập nhật các trường cần thiết, không thay đổi ID và user
         if (updatedAttendance.getCheckIn() != null) {
@@ -209,7 +253,7 @@ public class AttendanceService {
     @Deprecated
     public List<Attendance> getMonthlyAttendanceForUser(UUID userId, int year, int month) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
         return getMonthlyReport(user, year, month);
     }
     
@@ -219,7 +263,7 @@ public class AttendanceService {
     @Deprecated
     public List<Attendance> getYearlyAttendanceForUser(UUID userId, int year) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
         return getYearlyReport(user, year);
     }
     

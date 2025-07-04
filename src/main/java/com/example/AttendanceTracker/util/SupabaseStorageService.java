@@ -26,7 +26,7 @@ public class SupabaseStorageService {
     @Value("${supabase.key}")
     private String supabaseKey;
 
-    @Value("${supabase.bucket:attendencetracker}")
+    @Value("${supabase.bucket}")
     private String bucketName;
     
     private final RestTemplate restTemplate;
@@ -95,6 +95,7 @@ public class SupabaseStorageService {
             }
         } catch (Exception e) {
             logger.error("Error uploading file to Supabase", e);
+            System.err.println("Error uploading file to Supabase: " + e.getMessage());
             throw new RuntimeException("Failed to upload file to Supabase: " + e.getMessage(), e);
         }
     }
