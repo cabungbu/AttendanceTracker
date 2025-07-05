@@ -144,6 +144,24 @@ public class AttendanceService {
         return attendanceRepository.findByUserAndCheckInBetween(user, start, end);
     }
     
+    // Lấy danh sách attendance của user với filter theo ngày
+    public List<Attendance> getMyAttendance(User user, LocalDate from, LocalDate to) {
+        if (from != null && to != null) {
+            LocalDateTime fromTime = from.atStartOfDay();
+            LocalDateTime toTime = to.atTime(LocalTime.MAX);
+            return attendanceRepository.findByUserAndCheckInBetween(user, fromTime, toTime);
+        } else if (from != null) {
+            LocalDateTime fromTime = from.atStartOfDay();
+            return attendanceRepository.findByUserAndCheckInAfter(user, fromTime);
+        } else if (to != null) {
+            LocalDateTime toTime = to.atTime(LocalTime.MAX);
+            return attendanceRepository.findByUserAndCheckInBefore(user, toTime);
+        } else {
+            // Nếu không có filter, lấy tất cả attendance của user
+            return attendanceRepository.findByUser(user);
+        }
+    }
+    
     public Attendance findById(UUID id) {
         return attendanceRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy bản ghi điểm danh"));

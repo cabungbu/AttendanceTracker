@@ -151,6 +151,19 @@ public class AttendanceController {
         return ResponseEntity.ok(attendanceService.getAllAttendance());
     }
     
+    // Lấy danh sách attendance của tài khoản hiện tại
+    @GetMapping("/me")
+    @PreAuthorize("hasAnyRole('staff','admin')")
+    public ResponseEntity<List<Attendance>> getMyAttendance(
+            Authentication auth,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        String email = extractEmailFromAuth(auth);
+        User user = userService.findByEmail(email);
+        
+        return ResponseEntity.ok(attendanceService.getMyAttendance(user, from, to));
+    }
+    
     // Lọc attendance theo trạng thái
     @GetMapping("/filter")
     @PreAuthorize("hasAnyRole('staff','admin')")
