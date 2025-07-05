@@ -200,7 +200,6 @@ public class AttendanceController {
         return ResponseEntity.ok(attendanceService.updateAttendance(id, attendance));
     }
     
-    // Endpoint để kiểm tra cấu hình Supabase
     @GetMapping("/test-supabase-config")
     @PreAuthorize("hasRole('admin')")
     public ResponseEntity<Map<String, String>> testSupabaseConfig() {

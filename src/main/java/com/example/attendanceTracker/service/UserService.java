@@ -1,5 +1,6 @@
 package com.example.attendanceTracker.service;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -12,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.example.attendanceTracker.DTO.CreateUserDto;
+import com.example.attendanceTracker.DTO.UpdateUserDTO;
 import com.example.attendanceTracker.model.Role;
 import com.example.attendanceTracker.model.User;
 import com.example.attendanceTracker.repository.UserRepository;
@@ -40,8 +42,12 @@ public class UserService {
         return userRepository.findAll();
     }
 
-    public Page<User> listUsersPagination(Pageable pageable) {
-        return userRepository.findAll(pageable);
+    public Page<User> listUsers(Pageable pageable, String search) {
+        if (search == null || search.isBlank()) {
+            return userRepository.findAll(pageable);
+        }
+        String like = "%" + search.trim().toLowerCase() + "%";
+        return userRepository.findByNameContainingIgnoreCaseOrEmailContainingIgnoreCase(like, like, pageable);
     }
 
     public User findByEmail(String email) {
@@ -90,8 +96,8 @@ public class UserService {
     }
 
     @Transactional
-    public User updateUser(UUID id, User updated) {
-        User user = findById(id); // method đã có sẵn hoặc bạn thêm vào
+    public User updateUser(UUID id, UpdateUserDTO updated) {
+        User user = findById(id);
          if (updated.getName() != null) {
             user.setName(updated.getName());
         }
@@ -123,5 +129,13 @@ public class UserService {
             user.setGender(updated.getGender());
         }
         return userRepository.save(user);
+    }
+
+    @Transactional
+    public void deleteUser(UUID id) {
+        User user = findById(id);  
+        user.setIsDeleted(true);
+        user.setDeletedDate(LocalDate.now());
+        userRepository.save(user);
     }
 }
