@@ -4,6 +4,8 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -92,4 +94,11 @@ public class ComplainService {
     public List<Complain> getAllComplaints() {
         return complainRepository.findAll();
     }
+
+   public Page<Complain> getComplainsByMonthAndYear(int year, int month, Pageable pageable) {
+        LocalDateTime start = LocalDateTime.of(year, month, 1, 0, 0);
+        LocalDateTime end = start.plusMonths(1);
+        return complainRepository.findByCreatedAtBetween(start, end, pageable);
+    }
+
 }

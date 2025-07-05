@@ -3,6 +3,8 @@ package com.example.attendanceTracker.controller;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -78,6 +80,17 @@ public class ComplainController {
         }
         return ResponseEntity.ok(complainService.getAllComplaints());
     }
+
+    @GetMapping("/get-by-month")
+    @PreAuthorize("hasRole('admin')")
+    public ResponseEntity<Page<Complain>> getComplainByMonth(
+        Pageable pageable,
+        @RequestParam int year,
+        @RequestParam int month
+    ) {
+        return ResponseEntity.ok(complainService.getComplainsByMonthAndYear(year, month, pageable));
+    }
+
     
     // Lấy chi tiết 1 khiếu nại
     @GetMapping("/{id}")

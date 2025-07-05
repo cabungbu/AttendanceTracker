@@ -86,7 +86,7 @@ public class UserService {
         user.setAvatarUrl(dto.getAvatarUrl());
         user.setDateOfBirth(dto.getDateOfBirth());
         user.setPosition(dto.getPosition());
-        user.setRole(Role.valueOf(dto.getRole().toUpperCase()));
+        user.setRole(Role.valueOf(dto.getRole().toLowerCase()));
         user.setIsDeleted(dto.isDeleted());
         user.setDeletedDate(dto.getDeletedDate());
         user.setPhoneNumber(dto.getPhoneNumber());
