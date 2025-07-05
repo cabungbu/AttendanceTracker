@@ -15,7 +15,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -24,6 +23,7 @@ import org.springframework.web.multipart.MultipartFile;
 import com.example.attendanceTracker.DTO.AttendanceReportDTO;
 import com.example.attendanceTracker.DTO.CheckInDTO;
 import com.example.attendanceTracker.DTO.CheckOutDTO;
+import com.example.attendanceTracker.DTO.UpdateAttendanceDTO;
 import com.example.attendanceTracker.model.Attendance;
 import com.example.attendanceTracker.model.User;
 import com.example.attendanceTracker.service.AttendanceService;
@@ -151,6 +151,19 @@ public class AttendanceController {
         return ResponseEntity.ok(attendanceService.getAllAttendance());
     }
     
+    // Lấy danh sách attendance của tài khoản hiện tại
+    @GetMapping("/me")
+    @PreAuthorize("hasAnyRole('staff','admin')")
+    public ResponseEntity<List<Attendance>> getMyAttendance(
+            Authentication auth,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        String email = extractEmailFromAuth(auth);
+        User user = userService.findByEmail(email);
+        
+        return ResponseEntity.ok(attendanceService.getMyAttendance(user, from, to));
+    }
+    
     // Lọc attendance theo trạng thái
     @GetMapping("/filter")
     @PreAuthorize("hasAnyRole('staff','admin')")
@@ -194,12 +207,45 @@ public class AttendanceController {
     // Sửa một bản ghi attendance (quyền admin)
     @PutMapping("/update/{id}")
     @PreAuthorize("hasRole('admin')")
-    public ResponseEntity<Attendance> updateAttendance(
+    public ResponseEntity<?> updateAttendance(
             @PathVariable UUID id,
-            @RequestBody Attendance attendance) {
-        return ResponseEntity.ok(attendanceService.updateAttendance(id, attendance));
+            @RequestParam(required = false) String checkIn,
+            @RequestParam(required = false) String checkOut,
+            @RequestParam(value = "checkInImage", required = false) MultipartFile checkInImage,
+            @RequestParam(value = "checkOutImage", required = false) MultipartFile checkOutImage) {
+        try {
+            UpdateAttendanceDTO dto = new UpdateAttendanceDTO();
+            
+            // Parse thời gian nếu có
+            if (checkIn != null && !checkIn.trim().isEmpty()) {
+                dto.setCheckIn(java.time.LocalDateTime.parse(checkIn));
+            }
+            
+            if (checkOut != null && !checkOut.trim().isEmpty()) {
+                dto.setCheckOut(java.time.LocalDateTime.parse(checkOut));
+            }
+            
+            // Set hình ảnh nếu có
+            dto.setCheckInImage(checkInImage);
+            dto.setCheckOutImage(checkOutImage);
+            
+            Attendance updatedAttendance = attendanceService.updateAttendance(id, dto);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "SUCCESS");
+            response.put("message", "Cập nhật điểm danh thành công");
+            response.put("attendance", updatedAttendance);
+            
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("status", "ERROR");
+            errorResponse.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(errorResponse);
+        }
     }
     
+    // Endpoint để kiểm tra cấu hình Supabase
     @GetMapping("/test-supabase-config")
     @PreAuthorize("hasRole('admin')")
     public ResponseEntity<Map<String, String>> testSupabaseConfig() {

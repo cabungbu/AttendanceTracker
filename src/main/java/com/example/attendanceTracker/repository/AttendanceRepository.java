@@ -21,6 +21,10 @@ public interface AttendanceRepository extends JpaRepository<Attendance, UUID> {
     List<Attendance> findByCheckInBefore(LocalDateTime to);
     List<Attendance> findByUser(User user);
     
+    // Methods for user-specific queries with date filtering
+    List<Attendance> findByUserAndCheckInAfter(User user, LocalDateTime from);
+    List<Attendance> findByUserAndCheckInBefore(User user, LocalDateTime to);
+    
     // // Find today's attendance record for a user
     // @Query("SELECT a FROM Attendance a WHERE a.user = :user AND DATE(a.checkIn) = CURRENT_DATE")
     // Optional<Attendance> findTodayAttendanceByUser(@Param("user") User user);
