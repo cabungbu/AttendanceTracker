@@ -2,6 +2,7 @@ package com.example.attendanceTracker.config;
 
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
@@ -31,6 +32,9 @@ public class SecurityConfig {
 
     private final AccessDeniedHandler customAccessDeniedHandler;
 
+    @Autowired
+    private RestAuthenticationEntryPoint restAuthEntryPoint;
+
     public SecurityConfig(
       Converter<Jwt, JwtAuthenticationToken> jwtAuthConverter,
       AccessDeniedHandler customAccessDeniedHandler
@@ -54,14 +58,13 @@ public class SecurityConfig {
               .requestMatchers(HttpMethod.OPTIONS).permitAll()
               .anyRequest().authenticated()
           )
-            .exceptionHandling(ex -> ex
-              .accessDeniedHandler(customAccessDeniedHandler)
+            .oauth2ResourceServer(oauth2 -> oauth2
+          .authenticationEntryPoint(restAuthEntryPoint)
+          .accessDeniedHandler(customAccessDeniedHandler)
+          .jwt(jwt -> jwt
+              .jwtAuthenticationConverter(jwtAuthConverter)
           )
-          .oauth2ResourceServer(oauth2 -> oauth2
-              .jwt(jwt -> jwt
-                  .jwtAuthenticationConverter(jwtAuthConverter)
-              )
-          );
+      );
         return http.build();
     }
 

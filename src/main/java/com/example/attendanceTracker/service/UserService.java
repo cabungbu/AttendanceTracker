@@ -98,8 +98,11 @@ public class UserService {
     @Transactional
     public User updateUser(UUID id, UpdateUserDTO updated) {
         User user = findById(id);
-         if (updated.getName() != null) {
+        if (updated.getName() != null) {
             user.setName(updated.getName());
+        }
+        if (updated.getEmail() != null) {
+            user.setEmail(updated.getEmail());
         }
         if (updated.getAvatarUrl() != null) {
             user.setAvatarUrl(updated.getAvatarUrl());
