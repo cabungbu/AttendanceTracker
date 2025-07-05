@@ -144,6 +144,24 @@ public class AttendanceService {
         return attendanceRepository.findByUserAndCheckInBetween(user, start, end);
     }
     
+    // Lấy danh sách attendance của user với filter theo ngày
+    public List<Attendance> getMyAttendance(User user, LocalDate from, LocalDate to) {
+        if (from != null && to != null) {
+            LocalDateTime fromTime = from.atStartOfDay();
+            LocalDateTime toTime = to.atTime(LocalTime.MAX);
+            return attendanceRepository.findByUserAndCheckInBetween(user, fromTime, toTime);
+        } else if (from != null) {
+            LocalDateTime fromTime = from.atStartOfDay();
+            return attendanceRepository.findByUserAndCheckInAfter(user, fromTime);
+        } else if (to != null) {
+            LocalDateTime toTime = to.atTime(LocalTime.MAX);
+            return attendanceRepository.findByUserAndCheckInBefore(user, toTime);
+        } else {
+            // Nếu không có filter, lấy tất cả attendance của user
+            return attendanceRepository.findByUser(user);
+        }
+    }
+    
     public Attendance findById(UUID id) {
         return attendanceRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy bản ghi điểm danh"));
@@ -247,20 +265,34 @@ public class AttendanceService {
     }
     
     @Transactional
-    public Attendance updateAttendance(UUID id, Attendance updatedAttendance) {
+    public Attendance updateAttendance(UUID id, com.example.attendanceTracker.DTO.UpdateAttendanceDTO dto) {
         Attendance existingAttendance = attendanceRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy bản ghi điểm danh"));
         
-        // Chỉ cập nhật các trường cần thiết, không thay đổi ID và user
-        if (updatedAttendance.getCheckIn() != null) {
-            existingAttendance.setCheckIn(updatedAttendance.getCheckIn());
+        // Cập nhật thời gian check-in nếu có
+        if (dto.getCheckIn() != null) {
+            existingAttendance.setCheckIn(dto.getCheckIn());
         }
         
-        if (updatedAttendance.getCheckOut() != null) {
-            existingAttendance.setCheckOut(updatedAttendance.getCheckOut());
+        // Cập nhật thời gian check-out nếu có
+        if (dto.getCheckOut() != null) {
+            existingAttendance.setCheckOut(dto.getCheckOut());
         }
         
-        // Cập nhật các trường khác nếu có
+        // Cập nhật hình ảnh check-in nếu có
+        if (dto.getCheckInImage() != null && !dto.getCheckInImage().isEmpty()) {
+            String imageUrl = fileStorageService.storeFile(dto.getCheckInImage(), 
+                    "checkin_update_" + existingAttendance.getUser().getId() + "_" + System.currentTimeMillis());
+            existingAttendance.setCheckInImageUrl(imageUrl);
+        }
+        
+        // Cập nhật hình ảnh check-out nếu có
+        if (dto.getCheckOutImage() != null && !dto.getCheckOutImage().isEmpty()) {
+            String imageUrl = fileStorageService.storeFile(dto.getCheckOutImage(), 
+                    "checkout_update_" + existingAttendance.getUser().getId() + "_" + System.currentTimeMillis());
+            existingAttendance.setCheckOutImageUrl(imageUrl);
+        }
+        
         return attendanceRepository.save(existingAttendance);
     }
     
