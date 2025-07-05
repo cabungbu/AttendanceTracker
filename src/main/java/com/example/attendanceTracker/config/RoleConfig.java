@@ -10,10 +10,12 @@ import org.springframework.core.convert.converter.Converter;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
+import org.springframework.security.oauth2.core.OAuth2Error;
+import org.springframework.security.oauth2.core.OAuth2ErrorCodes;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.security.web.access.AccessDeniedHandler;
-import org.springframework.web.server.ResponseStatusException;
 
 import com.example.attendanceTracker.model.User;
 import com.example.attendanceTracker.repository.UserRepository;
@@ -37,21 +39,21 @@ public class RoleConfig {
         return jwt -> {
             String email = jwt.getClaimAsString("email");
             User user = userRepo.findByEmail(email)
-                .orElseThrow(() ->
-                    new ResponseStatusException(
-                        HttpStatus.UNAUTHORIZED,
-                        "Không tìm thấy user với email: " + email
+               .orElseThrow(() ->
+                new OAuth2AuthenticationException(
+                    new OAuth2Error(
+                        OAuth2ErrorCodes.INVALID_TOKEN,
+                        "Không tìm thấy user với email: " + email,
+                        null
                     )
-                );
+                )
+            );
             String role = user.getRole().name(); // ví dụ "ADMIN"
             GrantedAuthority authority = new SimpleGrantedAuthority("ROLE_" + role);
             return new JwtAuthenticationToken(jwt, List.of(authority), jwt.getSubject());
         };
     }
 
-    /**
-     * Handler trả về JSON khi user đã xác thực nhưng thiếu quyền (403)
-     */
     @Bean
     public AccessDeniedHandler customAccessDeniedHandler() {
         return new AccessDeniedHandler() {
@@ -71,8 +73,6 @@ public class RoleConfig {
                     "status", HttpStatus.FORBIDDEN.value(),
                     "path", request.getRequestURI()
                 );
-
-                // writeValue có thể ném IOException, nhưng vì method khai throws nên compiler OK
                 mapper.writeValue(response.getWriter(), body);
             }
         };
