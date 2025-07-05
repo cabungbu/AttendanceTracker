@@ -6,11 +6,16 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,6 +35,15 @@ public class AttendanceService {
     private final UserRepository userRepository;
     private final ComplainRepository complainRepository;
     private final FileStorageService fileStorageService;
+
+    @Value("${supabase.url}")
+    private String supabaseUrl;
+    
+    @Value("${supabase.key}")
+    private String supabaseKey;
+    
+    @Value("${supabase.bucket}")
+    private String supabaseBucket;
 
     public AttendanceService(
             AttendanceRepository attendanceRepository, 
@@ -135,7 +149,7 @@ public class AttendanceService {
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy bản ghi điểm danh"));
     }
     
-    public List<Attendance> getAllAttendance(LocalDate from, LocalDate to) {
+    public List<Attendance> getAttendanceBetween(LocalDate from, LocalDate to) {
         if (from != null && to != null) {
             LocalDateTime fromTime = from.atStartOfDay();
             LocalDateTime toTime = to.atTime(LocalTime.MAX);
@@ -149,6 +163,10 @@ public class AttendanceService {
         } else {
             return attendanceRepository.findAll();
         }
+    }
+
+    public List<Attendance> getAllAttendance() {
+        return attendanceRepository.findAll();
     }
     
     public List<Attendance> filterAttendance(Boolean checkedIn, Boolean checkedOut, UUID userId) {
@@ -285,5 +303,98 @@ public class AttendanceService {
         LocalDateTime start = LocalDateTime.of(LocalDate.of(year, 1, 1), LocalTime.MIN);
         LocalDateTime end = LocalDateTime.of(LocalDate.of(year, 12, 31), LocalTime.MAX);
         return attendanceRepository.findByCheckInBetween(start, end);
+    }
+
+    // Test Supabase configuration
+    public ResponseEntity<Map<String, String>> testSupabaseConfig() {
+        try {
+            String url = supabaseUrl != null ? supabaseUrl : "Not configured";
+            String bucket = supabaseBucket != null ? supabaseBucket : "Not configured";
+            
+            String maskedKey = "Not configured";
+            if (supabaseKey != null && supabaseKey.length() > 15) {
+                maskedKey = supabaseKey.substring(0, 10) + "..." + 
+                            supabaseKey.substring(supabaseKey.length() - 5);
+            }
+            
+            Map<String, String> config = new HashMap<>();
+            config.put("supabaseUrl", url);
+            config.put("supabaseBucket", bucket);
+            config.put("supabaseKey", maskedKey);
+            config.put("configSource", "From application.properties using .env values");
+            
+            try {
+                String listEndpoint = supabaseUrl + "/storage/v1/object/list/" + supabaseBucket;
+                
+                org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+                headers.set("apikey", supabaseKey);
+                headers.set("Authorization", "Bearer " + supabaseKey);
+                headers.setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
+                
+                // Fix: Add required 'prefix' property to request body
+                String requestBody = "{\"prefix\": \"\", \"limit\": 10}";
+                org.springframework.http.HttpEntity<String> requestEntity = 
+                    new org.springframework.http.HttpEntity<>(requestBody, headers);
+                
+                org.springframework.web.client.RestTemplate restTemplate = 
+                    new org.springframework.web.client.RestTemplate();
+                
+                org.springframework.http.ResponseEntity<String> response = restTemplate.exchange(
+                    listEndpoint,
+                    org.springframework.http.HttpMethod.POST,
+                    requestEntity,
+                    String.class);
+                
+                config.put("bucketTest", "SUCCESS - Status: " + response.getStatusCode());
+                config.put("bucketResponse", response.getBody());
+                
+            } catch (Exception bucketError) {
+                config.put("bucketTest", "FAILED");
+                config.put("bucketError", bucketError.getMessage());
+                
+                // More specific error handling
+                if (bucketError.getMessage().contains("404")) {
+                    config.put("bucketErrorType", "BUCKET_NOT_FOUND - Tạo bucket 'attendencetracker' trong Supabase Dashboard");
+                } else if (bucketError.getMessage().contains("401") || bucketError.getMessage().contains("403")) {
+                    config.put("bucketErrorType", "PERMISSION_DENIED - Sử dụng service_role key hoặc thiết lập RLS policies");
+                } else {
+                    config.put("bucketErrorType", "UNKNOWN_ERROR");
+                }
+            }
+            
+            return ResponseEntity.ok(config);
+        } catch (Exception e) {
+            Map<String, String> errorConfig = new HashMap<>();
+            errorConfig.put("error", "Lỗi khi lấy cấu hình Supabase: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorConfig);
+        }
+    }
+
+    // Get today's attendance status for a user
+    public ResponseEntity<Map<String, Object>> getTodayAttendanceStatus(User user) {
+        Map<String, Object> response = new HashMap<>();
+        
+        Optional<Attendance> todayAttendance = getTodayAttendance(user);
+        
+        if (todayAttendance.isPresent()) {
+            Attendance attendance = todayAttendance.get();
+            response.put("hasCheckedIn", true);
+            response.put("checkInTime", attendance.getCheckIn());
+            response.put("hasCheckedOut", attendance.getCheckOut() != null);
+            if (attendance.getCheckOut() != null) {
+                response.put("checkOutTime", attendance.getCheckOut());
+            }
+            response.put("canCheckOut", canCheckOutToday(user));
+            response.put("attendance", attendance);
+        } else {
+            response.put("hasCheckedIn", false);
+            response.put("hasCheckedOut", false);
+            response.put("canCheckIn", true);
+            response.put("canCheckOut", false);
+        }
+        
+        response.put("canCheckIn", canCheckInToday(user));
+        
+        return ResponseEntity.ok(response);
     }
 }
