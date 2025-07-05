@@ -1,29 +1,17 @@
 package com.example.attendanceTracker.DTO;
 
-import java.util.UUID;
-
 import org.springframework.web.multipart.MultipartFile;
 
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
+import com.example.attendanceTracker.model.StatusComplain;
 
-public class CreateComplainDTO {
+public class UpdateComplainDTO {
     
-    @NotNull(message = "Attendance ID is required")
-    private UUID attendanceId;
-    
-    @NotBlank(message = "Content is required")
     private String content;
-    
+    private StatusComplain status;
     private MultipartFile complainImage;
 
-    public UUID getAttendanceId() {
-        return attendanceId;
-    }
-
-    public void setAttendanceId(UUID attendanceId) {
-        this.attendanceId = attendanceId;
-    }
+    // Default constructor
+    public UpdateComplainDTO() {}
 
     public String getContent() {
         return content;
@@ -31,6 +19,14 @@ public class CreateComplainDTO {
 
     public void setContent(String content) {
         this.content = content;
+    }
+
+    public StatusComplain getStatus() {
+        return status;
+    }
+
+    public void setStatus(StatusComplain status) {
+        this.status = status;
     }
 
     public MultipartFile getComplainImage() {

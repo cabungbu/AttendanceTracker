@@ -13,13 +13,16 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.example.attendanceTracker.DTO.CreateComplainDTO;
+import com.example.attendanceTracker.DTO.UpdateComplainDTO;
 import com.example.attendanceTracker.DTO.UpdateComplainStatusDTO;
 import com.example.attendanceTracker.model.Complain;
 import com.example.attendanceTracker.model.StatusComplain;
@@ -53,9 +56,17 @@ public class ComplainController {
     @PreAuthorize("hasAnyRole('staff','admin')")
     @ResponseStatus(HttpStatus.CREATED)
     public ResponseEntity<Complain> createComplain(
-            @Valid @RequestBody CreateComplainDTO dto,
+            @RequestParam UUID attendanceId,
+            @RequestParam String content,
+            @RequestParam(value = "complainImage", required = false) MultipartFile complainImage,
             Authentication auth) {
         User user = userService.findByEmail(extractEmailFromAuth(auth));
+        
+        CreateComplainDTO dto = new CreateComplainDTO();
+        dto.setAttendanceId(attendanceId);
+        dto.setContent(content);
+        dto.setComplainImage(complainImage);
+        
         Complain complain = complainService.createComplain(user, dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(complain);
     }
@@ -104,6 +115,44 @@ public class ComplainController {
             @PathVariable UUID id, 
             @Valid @RequestBody UpdateComplainStatusDTO dto) {
         Complain complain = complainService.updateComplainStatus(id, dto);
+        return ResponseEntity.ok(complain);
+    }
+    
+    // Cập nhật toàn bộ thông tin khiếu nại
+    @PutMapping("/update/{id}")
+    @PreAuthorize("hasAnyRole('staff','admin')")
+    public ResponseEntity<Complain> updateComplain(
+            @PathVariable UUID id,
+            @RequestParam(required = false) String content,
+            @RequestParam(required = false) String status,
+            @RequestParam(value = "complainImage", required = false) MultipartFile complainImage,
+            Authentication auth) {
+        User user = userService.findByEmail(extractEmailFromAuth(auth));
+        
+        UpdateComplainDTO dto = new UpdateComplainDTO();
+        dto.setContent(content);
+        if (status != null && !status.trim().isEmpty()) {
+            try {
+                dto.setStatus(StatusComplain.valueOf(status.toUpperCase()));
+            } catch (IllegalArgumentException e) {
+                throw new RuntimeException("Invalid status value: " + status);
+            }
+        }
+        dto.setComplainImage(complainImage);
+        
+        Complain complain = complainService.updateComplain(id, dto, user);
+        return ResponseEntity.ok(complain);
+    }
+    
+    // Cập nhật chỉ hình ảnh khiếu nại
+    @PatchMapping("/update-image/{id}")
+    @PreAuthorize("hasAnyRole('staff','admin')")
+    public ResponseEntity<Complain> updateComplainImage(
+            @PathVariable UUID id,
+            @RequestParam(value = "complainImage", required = false) MultipartFile complainImage,
+            Authentication auth) {
+        User user = userService.findByEmail(extractEmailFromAuth(auth));
+        Complain complain = complainService.updateComplainImage(id, complainImage, user);
         return ResponseEntity.ok(complain);
     }
     

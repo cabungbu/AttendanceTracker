@@ -14,6 +14,8 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -144,7 +146,25 @@ public class AttendanceService {
         return attendanceRepository.findByUserAndCheckInBetween(user, start, end);
     }
     
-    // Lấy danh sách attendance của user với filter theo ngày
+    // Lấy danh sách attendance của user với filter theo ngày (with pagination)
+    public Page<Attendance> getMyAttendance(User user, Pageable pageable, LocalDate from, LocalDate to) {
+        if (from != null && to != null) {
+            LocalDateTime fromTime = from.atStartOfDay();
+            LocalDateTime toTime = to.atTime(LocalTime.MAX);
+            return attendanceRepository.findByUserAndCheckInBetween(user, fromTime, toTime, pageable);
+        } else if (from != null) {
+            LocalDateTime fromTime = from.atStartOfDay();
+            return attendanceRepository.findByUserAndCheckInAfter(user, fromTime, pageable);
+        } else if (to != null) {
+            LocalDateTime toTime = to.atTime(LocalTime.MAX);
+            return attendanceRepository.findByUserAndCheckInBefore(user, toTime, pageable);
+        } else {
+            // Nếu không có filter, lấy tất cả attendance của user
+            return attendanceRepository.findByUser(user, pageable);
+        }
+    }
+
+    // Lấy danh sách attendance của user với filter theo ngày (without pagination - kept for backward compatibility)
     public List<Attendance> getMyAttendance(User user, LocalDate from, LocalDate to) {
         if (from != null && to != null) {
             LocalDateTime fromTime = from.atStartOfDay();
@@ -183,8 +203,36 @@ public class AttendanceService {
         }
     }
 
-    public List<Attendance> getAllAttendance() {
-        return attendanceRepository.findAll();
+    public Page<Attendance> getAllAttendance(Pageable pageable, LocalDate from, LocalDate to) {
+        if (from != null && to != null) {
+            LocalDateTime fromTime = from.atStartOfDay();
+            LocalDateTime toTime = to.atTime(LocalTime.MAX);
+            return attendanceRepository.findByCheckInBetween(fromTime, toTime, pageable);
+        } else if (from != null) {
+            LocalDateTime fromTime = from.atStartOfDay();
+            return attendanceRepository.findByCheckInAfter(fromTime, pageable);
+        } else if (to != null) {
+            LocalDateTime toTime = to.atTime(LocalTime.MAX);
+            return attendanceRepository.findByCheckInBefore(toTime, pageable);
+        } else {
+            return attendanceRepository.findAll(pageable);
+        }
+    }
+
+    public List<Attendance> getAllAttendance(LocalDate from, LocalDate to) {
+        if (from != null && to != null) {
+            LocalDateTime fromTime = from.atStartOfDay();
+            LocalDateTime toTime = to.atTime(LocalTime.MAX);
+            return attendanceRepository.findByCheckInBetween(fromTime, toTime);
+        } else if (from != null) {
+            LocalDateTime fromTime = from.atStartOfDay();
+            return attendanceRepository.findByCheckInAfter(fromTime);
+        } else if (to != null) {
+            LocalDateTime toTime = to.atTime(LocalTime.MAX);
+            return attendanceRepository.findByCheckInBefore(toTime);
+        } else {
+            return attendanceRepository.findAll();
+        }
     }
     
     public List<Attendance> filterAttendance(Boolean checkedIn, Boolean checkedOut, UUID userId) {
@@ -230,18 +278,14 @@ public class AttendanceService {
         report.setYear(year);
         report.setMonth(month);
         
-        // Tính số ngày trong tháng
         LocalDate date = LocalDate.of(year, month, 1);
         int daysInMonth = date.lengthOfMonth();
         report.setTotalDays(daysInMonth);
         
-        // Tính số ngày có mặt (có bản ghi attendance)
         report.setPresentDays(attendances.size());
         
-        // Tính số ngày vắng mặt
         report.setAbsentDays(daysInMonth - report.getPresentDays());
-        
-        // Tính tổng số giờ làm việc
+
         double totalHours = 0;
         for (Attendance attendance : attendances) {
             if (attendance.getCheckIn() != null && attendance.getCheckOut() != null) {
@@ -251,7 +295,68 @@ public class AttendanceService {
         }
         report.setTotalHours(totalHours);
         
-        // Thêm danh sách các bản ghi attendance
+        report.setAttendanceRecords(attendances);
+        
+        return report;
+    }
+
+    public AttendanceReportDTO getSummaryByPeriod(UUID userId, LocalDate from, LocalDate to) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
+        LocalDateTime fromTime = from.atStartOfDay();
+        LocalDateTime toTime = to.atTime(LocalTime.MAX);
+        List<Attendance> attendances = attendanceRepository.findByUserAndCheckInBetween(user, fromTime, toTime);
+
+        AttendanceReportDTO report = new AttendanceReportDTO();
+        report.setUserId(userId);
+        report.setUserName(user.getName());
+        report.setUserEmail(user.getEmail());
+        report.setTotalDays((int) ChronoUnit.DAYS.between(from, to) + 1);
+        report.setAttendanceRecords(attendances);
+        report.setPresentDays(attendances.size());
+        report.setAbsentDays(report.getTotalDays() - report.getPresentDays());
+        double totalHours = 0;
+        for (Attendance attendance : attendances) {
+            if (attendance.getCheckIn() != null && attendance.getCheckOut() != null) {
+                double hours = ChronoUnit.MINUTES.between(attendance.getCheckIn(), attendance.getCheckOut()) / 60.0;
+                totalHours += hours;
+            }
+        }
+        report.setTotalHours(totalHours);
+        return report;
+    }
+
+    public AttendanceReportDTO getYearlySummary(UUID userId, int year) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
+        
+        List<Attendance> attendances = getYearlyReport(user, year);
+        
+        AttendanceReportDTO report = new AttendanceReportDTO();
+        report.setUserId(userId);
+        report.setUserName(user.getName());
+        report.setUserEmail(user.getEmail());
+        report.setYear(year);
+        
+        // Tính tổng số ngày trong năm
+        LocalDate startOfYear = LocalDate.of(year, 1, 1);
+        LocalDate endOfYear = LocalDate.of(year, 12, 31);
+        int totalDays = (int) ChronoUnit.DAYS.between(startOfYear, endOfYear) + 1;
+        report.setTotalDays(totalDays);
+        
+        report.setPresentDays(attendances.size());
+        
+        report.setAbsentDays(totalDays - report.getPresentDays());
+
+        double totalHours = 0;
+        for (Attendance attendance : attendances) {
+            if (attendance.getCheckIn() != null && attendance.getCheckOut() != null) {
+                double hours = ChronoUnit.MINUTES.between(attendance.getCheckIn(), attendance.getCheckOut()) / 60.0;
+                totalHours += hours;
+            }
+        }
+        report.setTotalHours(totalHours);
+        
         report.setAttendanceRecords(attendances);
         
         return report;
@@ -428,5 +533,19 @@ public class AttendanceService {
         response.put("canCheckIn", canCheckInToday(user));
         
         return ResponseEntity.ok(response);
+    }
+    
+    public Page<Attendance> getAttendanceByUserId(UUID userId, Pageable pageable, LocalDate from, LocalDate to) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
+        
+        return getMyAttendance(user, pageable, from, to);
+    }
+
+    public List<Attendance> getAttendanceByUserId(UUID userId, LocalDate from, LocalDate to) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
+        
+        return getMyAttendance(user, from, to);
     }
 }

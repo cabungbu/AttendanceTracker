@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -24,6 +26,15 @@ public interface AttendanceRepository extends JpaRepository<Attendance, UUID> {
     // Methods for user-specific queries with date filtering
     List<Attendance> findByUserAndCheckInAfter(User user, LocalDateTime from);
     List<Attendance> findByUserAndCheckInBefore(User user, LocalDateTime to);
+    
+    // Pagination methods
+    Page<Attendance> findByUserAndCheckInBetween(User user, LocalDateTime start, LocalDateTime end, Pageable pageable);
+    Page<Attendance> findByCheckInBetween(LocalDateTime start, LocalDateTime end, Pageable pageable);
+    Page<Attendance> findByCheckInAfter(LocalDateTime from, Pageable pageable);
+    Page<Attendance> findByCheckInBefore(LocalDateTime to, Pageable pageable);
+    Page<Attendance> findByUser(User user, Pageable pageable);
+    Page<Attendance> findByUserAndCheckInAfter(User user, LocalDateTime from, Pageable pageable);
+    Page<Attendance> findByUserAndCheckInBefore(User user, LocalDateTime to, Pageable pageable);
     
     // // Find today's attendance record for a user
     // @Query("SELECT a FROM Attendance a WHERE a.user = :user AND DATE(a.checkIn) = CURRENT_DATE")

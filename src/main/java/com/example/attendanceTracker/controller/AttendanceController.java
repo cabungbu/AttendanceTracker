@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -110,7 +112,10 @@ public class AttendanceController {
             Authentication auth) {
         String currentUserEmail = extractEmailFromAuth(auth);
         
-        User user = userService.findByEmail(currentUserEmail);
+        User user = userService.findByEmail(
+            auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"))
+                ? (email != null ? email : currentUserEmail)
+                : currentUserEmail);
         return ResponseEntity.ok(attendanceService.getMonthlyReport(user, year, month));
     }
 
@@ -136,32 +141,48 @@ public class AttendanceController {
         return ResponseEntity.ok(attendanceService.findById(id));
     }
     
-    // Lấy danh sách attendance của tất cả user (cho admin)
+    // Lấy danh sách attendance của tất cả user theo khoảng thời gian (cho admin)
     @GetMapping("/getBetween")
     @PreAuthorize("hasRole('admin')")
-    public ResponseEntity<List<Attendance>> getAllAttendance(
+    public ResponseEntity<List<Attendance>> getAttendanceBetween(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
         return ResponseEntity.ok(attendanceService.getAttendanceBetween(from, to));
     }
 
+    // Lấy tất cả attendance (có thể filter theo thời gian)
     @GetMapping("/all")
     @PreAuthorize("hasRole('admin')")
-    public ResponseEntity<List<Attendance>> getAllAttendance() {
-        return ResponseEntity.ok(attendanceService.getAllAttendance());
+    public ResponseEntity<Page<Attendance>> getAllAttendance(
+            Pageable pageable,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        return ResponseEntity.ok(attendanceService.getAllAttendance(pageable, from, to));
+    }
+    
+    // Lấy attendance theo userId cụ thể (cho admin)
+    @GetMapping("/getByUser/{userId}")
+    @PreAuthorize("hasRole('admin')")
+    public ResponseEntity<Page<Attendance>> getAttendanceByUserId(
+            @PathVariable UUID userId,
+            Pageable pageable,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        return ResponseEntity.ok(attendanceService.getAttendanceByUserId(userId, pageable, from, to));
     }
     
     // Lấy danh sách attendance của tài khoản hiện tại
     @GetMapping("/me")
     @PreAuthorize("hasAnyRole('staff','admin')")
-    public ResponseEntity<List<Attendance>> getMyAttendance(
+    public ResponseEntity<Page<Attendance>> getMyAttendance(
             Authentication auth,
+            Pageable pageable,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
         String email = extractEmailFromAuth(auth);
         User user = userService.findByEmail(email);
         
-        return ResponseEntity.ok(attendanceService.getMyAttendance(user, from, to));
+        return ResponseEntity.ok(attendanceService.getMyAttendance(user, pageable, from, to));
     }
     
     // Lọc attendance theo trạng thái
@@ -195,6 +216,47 @@ public class AttendanceController {
         }
         
         return ResponseEntity.ok(attendanceService.getMonthlySummary(userIdToUse, year, month));
+    }
+
+    // Báo cáo tổng hợp theo năm
+    @GetMapping("/summary/yearly")
+    @PreAuthorize("hasAnyRole('staff','admin')")
+    public ResponseEntity<AttendanceReportDTO> getYearlySummary(
+            @RequestParam int year,
+            @RequestParam(required = false) UUID userId,
+            Authentication auth) {
+        
+        UUID userIdToUse;
+        
+        if (userId != null && auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"))) {
+            userIdToUse = userId; // Admin có thể xem báo cáo của bất kỳ user nào
+        } else {
+            // Nếu không phải admin hoặc admin không chỉ định user, lấy thông tin user từ token
+            String currentUserEmail = extractEmailFromAuth(auth);
+            User user = userService.findByEmail(currentUserEmail);
+            userIdToUse = user.getId();
+        }
+        
+        return ResponseEntity.ok(attendanceService.getYearlySummary(userIdToUse, year));
+    }
+
+    // Báo cáo tổng hợp theo khoảng thời gian (from - to)
+    @GetMapping("/summary")
+    @PreAuthorize("hasAnyRole('staff','admin')")
+    public ResponseEntity<AttendanceReportDTO> getSummaryByPeriod(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            @RequestParam(required = false) UUID userId,
+            Authentication auth) {
+        UUID userIdToUse;
+        if (userId != null && auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"))) {
+            userIdToUse = userId;
+        } else {
+            String currentUserEmail = extractEmailFromAuth(auth);
+            User user = userService.findByEmail(currentUserEmail);
+            userIdToUse = user.getId();
+        }
+        return ResponseEntity.ok(attendanceService.getSummaryByPeriod(userIdToUse, from, to));
     }
     
     // Lấy danh sách attendance có khiếu nại

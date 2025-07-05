@@ -31,6 +31,8 @@ public class Complain {
     @Enumerated(EnumType.STRING)
     private StatusComplain status = StatusComplain.PENDING;
     
+    private String complainImageUrl;
+    
     private LocalDateTime createdAt = LocalDateTime.now();
 
     // Getters and Setters
@@ -72,5 +74,13 @@ public class Complain {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public String getComplainImageUrl() {
+        return complainImageUrl;
+    }
+
+    public void setComplainImageUrl(String complainImageUrl) {
+        this.complainImageUrl = complainImageUrl;
     }
 }
