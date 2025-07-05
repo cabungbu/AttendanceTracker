@@ -44,11 +44,11 @@ public class UserService {
 
     public Page<User> listUsers(Pageable pageable, String search) {
         if (search == null || search.isBlank()) {
-            return userRepository.findAll(pageable);
+            return userRepository.findByIsDeletedFalseOrIsDeletedIsNull(pageable);
         }
         return userRepository.findByNameContainingIgnoreCaseOrEmailContainingIgnoreCase(search.trim(), search.trim(), pageable);
-
     }
+
 
     public User findByEmail(String email) {
          return userRepository.findByEmail(email)
