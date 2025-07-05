@@ -46,8 +46,8 @@ public class UserService {
         if (search == null || search.isBlank()) {
             return userRepository.findAll(pageable);
         }
-        String like = "%" + search.trim().toLowerCase() + "%";
-        return userRepository.findByNameContainingIgnoreCaseOrEmailContainingIgnoreCase(like, like, pageable);
+        return userRepository.findByNameContainingIgnoreCaseOrEmailContainingIgnoreCase(search.trim(), search.trim(), pageable);
+
     }
 
     public User findByEmail(String email) {
@@ -86,7 +86,7 @@ public class UserService {
         user.setAvatarUrl(dto.getAvatarUrl());
         user.setDateOfBirth(dto.getDateOfBirth());
         user.setPosition(dto.getPosition());
-        user.setRole(Role.valueOf(dto.getRole().toUpperCase()));
+        user.setRole(Role.valueOf(dto.getRole().toLowerCase()));
         user.setIsDeleted(dto.isDeleted());
         user.setDeletedDate(dto.getDeletedDate());
         user.setPhoneNumber(dto.getPhoneNumber());
