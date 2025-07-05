@@ -7,6 +7,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -39,30 +40,37 @@ public class ComplainController {
         this.complainService = complainService;
         this.userService = userService;
     }
+
+    private String extractEmailFromAuth(Authentication auth) {
+        if (auth.getPrincipal() instanceof Jwt jwt) {
+            return jwt.getClaimAsString("email");
+        }
+        return auth.getName();
+    }
     
     // Gửi khiếu nại
-    @PostMapping
-    @PreAuthorize("hasAnyRole('STAFF','ADMIN')")
+    @PostMapping("/create")
+    @PreAuthorize("hasAnyRole('staff','admin')")
     @ResponseStatus(HttpStatus.CREATED)
     public ResponseEntity<Complain> createComplain(
             @Valid @RequestBody CreateComplainDTO dto,
             Authentication auth) {
-        User user = userService.findByEmail(auth.getName());
+        User user = userService.findByEmail(extractEmailFromAuth(auth));
         Complain complain = complainService.createComplain(user, dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(complain);
     }
     
     // Lấy danh sách khiếu nại của user đang đăng nhập
     @GetMapping("/my-complains")
-    @PreAuthorize("hasAnyRole('STAFF','ADMIN')")
+    @PreAuthorize("hasAnyRole('staff','admin')")
     public ResponseEntity<List<Complain>> getMyComplaints(Authentication auth) {
-        User user = userService.findByEmail(auth.getName());
+        User user = userService.findByEmail(extractEmailFromAuth(auth));
         return ResponseEntity.ok(complainService.getComplainsByUser(user));
     }
     
     // Lấy danh sách tất cả khiếu nại (cho admin)
-    @GetMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/get-all")
+    @PreAuthorize("hasRole('admin')")
     public ResponseEntity<List<Complain>> getAllComplaints(
             @RequestParam(required = false) StatusComplain status) {
         if (status != null) {
@@ -73,13 +81,13 @@ public class ComplainController {
     
     // Lấy chi tiết 1 khiếu nại
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('STAFF','ADMIN')")
+    @PreAuthorize("hasAnyRole('staff','admin')")
     public ResponseEntity<Complain> getComplaintById(@PathVariable UUID id, Authentication auth) {
         Complain complain = complainService.getComplainById(id);
         
         // Kiểm tra quyền truy cập
-        User user = userService.findByEmail(auth.getName());
-        boolean isAdmin = user.getRole().toString().equalsIgnoreCase("ADMIN");
+        User user = userService.findByEmail(extractEmailFromAuth(auth));
+        boolean isAdmin = user.getRole().toString().equalsIgnoreCase("admin");
         boolean isOwner = complain.getAttendance().getUser().getId().equals(user.getId());
         
         if (!isAdmin && !isOwner) {
@@ -90,8 +98,8 @@ public class ComplainController {
     }
     
     // Duyệt hoặc từ chối khiếu nại
-    @PatchMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PatchMapping("/update-status/{id}")
+    @PreAuthorize("hasRole('admin')")
     public ResponseEntity<Complain> updateComplaintStatus(
             @PathVariable UUID id, 
             @Valid @RequestBody UpdateComplainStatusDTO dto) {
@@ -100,24 +108,24 @@ public class ComplainController {
     }
     
     // Xóa khiếu nại (chỉ xóa được khiếu nại của chính mình và đang ở trạng thái PENDING)
-    @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('STAFF','ADMIN')")
+    @DeleteMapping("/delete/{id}")
+    @PreAuthorize("hasAnyRole('staff','admin')")
     public ResponseEntity<Void> deleteComplaint(@PathVariable UUID id, Authentication auth) {
-        User user = userService.findByEmail(auth.getName());
+        User user = userService.findByEmail(extractEmailFromAuth(auth));
         complainService.deleteComplain(id, user);
         return ResponseEntity.noContent().build();
     }
     
     // Lấy tất cả khiếu nại liên quan đến 1 bản ghi attendance
     @GetMapping("/by-attendance/{attendanceId}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('admin')")
     public ResponseEntity<List<Complain>> getComplaintsByAttendance(@PathVariable UUID attendanceId) {
         return ResponseEntity.ok(complainService.getComplainsByAttendance(attendanceId));
     }
     
     // Thống kê số lượng khiếu nại theo trạng thái
     @GetMapping("/stats")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('admin')")
     public ResponseEntity<java.util.Map<StatusComplain, Long>> getComplaintStats() {
         List<Complain> allComplaints = complainService.getAllComplaints();
         
