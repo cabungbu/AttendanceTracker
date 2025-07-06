@@ -113,7 +113,7 @@ public class AttendanceController {
         String currentUserEmail = extractEmailFromAuth(auth);
         
         User user = userService.findByEmail(
-            auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"))
+            auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_admin"))
                 ? (email != null ? email : currentUserEmail)
                 : currentUserEmail);
         return ResponseEntity.ok(attendanceService.getMonthlyReport(user, year, month));
@@ -128,7 +128,7 @@ public class AttendanceController {
         String currentUserEmail = extractEmailFromAuth(auth);
         
         User user = userService.findByEmail(
-            auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"))
+            auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_admin"))
                 ? (email != null ? email : currentUserEmail)
                 : currentUserEmail);
         return ResponseEntity.ok(attendanceService.getYearlyReport(user, year));
@@ -206,7 +206,7 @@ public class AttendanceController {
         
         UUID userIdToUse;
         
-        if (userId != null && auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"))) {
+        if (userId != null && auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_admin"))) {
             userIdToUse = userId; // Admin có thể xem báo cáo của bất kỳ user nào
         } else {
             // Nếu không phải admin hoặc admin không chỉ định user, lấy thông tin user từ token
@@ -228,7 +228,7 @@ public class AttendanceController {
         
         UUID userIdToUse;
         
-        if (userId != null && auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"))) {
+        if (userId != null && auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_admin"))) {
             userIdToUse = userId; // Admin có thể xem báo cáo của bất kỳ user nào
         } else {
             // Nếu không phải admin hoặc admin không chỉ định user, lấy thông tin user từ token
@@ -249,7 +249,7 @@ public class AttendanceController {
             @RequestParam(required = false) UUID userId,
             Authentication auth) {
         UUID userIdToUse;
-        if (userId != null && auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"))) {
+        if (userId != null && auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_admin"))) {
             userIdToUse = userId;
         } else {
             String currentUserEmail = extractEmailFromAuth(auth);

@@ -36,10 +36,6 @@ public interface AttendanceRepository extends JpaRepository<Attendance, UUID> {
     Page<Attendance> findByUserAndCheckInAfter(User user, LocalDateTime from, Pageable pageable);
     Page<Attendance> findByUserAndCheckInBefore(User user, LocalDateTime to, Pageable pageable);
     
-    // // Find today's attendance record for a user
-    // @Query("SELECT a FROM Attendance a WHERE a.user = :user AND DATE(a.checkIn) = CURRENT_DATE")
-    // Optional<Attendance> findTodayAttendanceByUser(@Param("user") User user);
-    
     // Alternative method to find attendance for a specific date
     @Query("SELECT a FROM Attendance a WHERE a.user = :user AND a.checkIn >= :startOfDay AND a.checkIn < :endOfDay")
     Optional<Attendance> findByUserAndDate(@Param("user") User user, @Param("startOfDay") LocalDateTime startOfDay, @Param("endOfDay") LocalDateTime endOfDay);

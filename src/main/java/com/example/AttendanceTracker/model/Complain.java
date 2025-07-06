@@ -3,6 +3,8 @@ package com.example.attendanceTracker.model;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -23,6 +25,7 @@ public class Complain {
 
     @ManyToOne
     @JoinColumn(name = "attendance_id", nullable = false)
+    @JsonBackReference
     private Attendance attendance;
     
     @Column(nullable = false)

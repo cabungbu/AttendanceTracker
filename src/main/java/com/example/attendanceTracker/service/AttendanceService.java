@@ -37,6 +37,7 @@ public class AttendanceService {
     private final UserRepository userRepository;
     private final ComplainRepository complainRepository;
     private final FileStorageService fileStorageService;
+    private final WorkScheduleService workScheduleService;
 
     @Value("${supabase.url}")
     private String supabaseUrl;
@@ -51,11 +52,13 @@ public class AttendanceService {
             AttendanceRepository attendanceRepository, 
             UserRepository userRepository,
             ComplainRepository complainRepository,
-            FileStorageService fileStorageService) {
+            FileStorageService fileStorageService,
+            WorkScheduleService workScheduleService) {
         this.attendanceRepository = attendanceRepository;
         this.userRepository = userRepository;
         this.complainRepository = complainRepository;
         this.fileStorageService = fileStorageService;
+        this.workScheduleService = workScheduleService;
     }
 
     @Transactional
@@ -283,7 +286,6 @@ public class AttendanceService {
         report.setTotalDays(daysInMonth);
         
         report.setPresentDays(attendances.size());
-        
         report.setAbsentDays(daysInMonth - report.getPresentDays());
 
         double totalHours = 0;
@@ -294,6 +296,20 @@ public class AttendanceService {
             }
         }
         report.setTotalHours(totalHours);
+        
+        // Tính toán thông tin đi trễ và về sớm
+        report.setLateDays(workScheduleService.countLateDays(attendances));
+        report.setTotalLateMinutes(workScheduleService.getTotalLateMinutes(attendances));
+        
+        long earlyCheckoutDays = attendances.stream()
+                .filter(workScheduleService::isEarlyCheckout)
+                .count();
+        report.setEarlyCheckoutDays(earlyCheckoutDays);
+        
+        long totalEarlyCheckoutMinutes = attendances.stream()
+                .mapToLong(workScheduleService::getEarlyCheckoutMinutes)
+                .sum();
+        report.setTotalEarlyCheckoutMinutes(totalEarlyCheckoutMinutes);
         
         report.setAttendanceRecords(attendances);
         
@@ -315,6 +331,7 @@ public class AttendanceService {
         report.setAttendanceRecords(attendances);
         report.setPresentDays(attendances.size());
         report.setAbsentDays(report.getTotalDays() - report.getPresentDays());
+        
         double totalHours = 0;
         for (Attendance attendance : attendances) {
             if (attendance.getCheckIn() != null && attendance.getCheckOut() != null) {
@@ -323,6 +340,21 @@ public class AttendanceService {
             }
         }
         report.setTotalHours(totalHours);
+        
+        // Tính toán thông tin đi trễ và về sớm
+        report.setLateDays(workScheduleService.countLateDays(attendances));
+        report.setTotalLateMinutes(workScheduleService.getTotalLateMinutes(attendances));
+        
+        long earlyCheckoutDays = attendances.stream()
+                .filter(workScheduleService::isEarlyCheckout)
+                .count();
+        report.setEarlyCheckoutDays(earlyCheckoutDays);
+        
+        long totalEarlyCheckoutMinutes = attendances.stream()
+                .mapToLong(workScheduleService::getEarlyCheckoutMinutes)
+                .sum();
+        report.setTotalEarlyCheckoutMinutes(totalEarlyCheckoutMinutes);
+        
         return report;
     }
 
@@ -356,6 +388,20 @@ public class AttendanceService {
             }
         }
         report.setTotalHours(totalHours);
+        
+        // Tính toán thông tin đi trễ và về sớm
+        report.setLateDays(workScheduleService.countLateDays(attendances));
+        report.setTotalLateMinutes(workScheduleService.getTotalLateMinutes(attendances));
+        
+        long earlyCheckoutDays = attendances.stream()
+                .filter(workScheduleService::isEarlyCheckout)
+                .count();
+        report.setEarlyCheckoutDays(earlyCheckoutDays);
+        
+        long totalEarlyCheckoutMinutes = attendances.stream()
+                .mapToLong(workScheduleService::getEarlyCheckoutMinutes)
+                .sum();
+        report.setTotalEarlyCheckoutMinutes(totalEarlyCheckoutMinutes);
         
         report.setAttendanceRecords(attendances);
         

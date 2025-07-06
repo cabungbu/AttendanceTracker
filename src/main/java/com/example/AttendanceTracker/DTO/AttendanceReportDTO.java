@@ -14,7 +14,11 @@ public class AttendanceReportDTO {
     private int totalDays;
     private double totalHours;
     private int presentDays;
-    private int absentDays;
+    private int absentDays;     
+    private long lateDays;
+    private long totalLateMinutes;
+    private long earlyCheckoutDays;
+    private long totalEarlyCheckoutMinutes;
     private List<Attendance> attendanceRecords;
 
     public UUID getUserId() {
@@ -95,5 +99,37 @@ public class AttendanceReportDTO {
 
     public void setAttendanceRecords(List<Attendance> attendanceRecords) {
         this.attendanceRecords = attendanceRecords;
+    }
+
+    public long getLateDays() {
+        return lateDays;
+    }
+
+    public void setLateDays(long lateDays) {
+        this.lateDays = lateDays;
+    }
+
+    public long getTotalLateMinutes() {
+        return totalLateMinutes;
+    }
+
+    public void setTotalLateMinutes(long totalLateMinutes) {
+        this.totalLateMinutes = totalLateMinutes;
+    }
+
+    public long getEarlyCheckoutDays() {
+        return earlyCheckoutDays;
+    }
+
+    public void setEarlyCheckoutDays(long earlyCheckoutDays) {
+        this.earlyCheckoutDays = earlyCheckoutDays;
+    }
+
+    public long getTotalEarlyCheckoutMinutes() {
+        return totalEarlyCheckoutMinutes;
+    }
+
+    public void setTotalEarlyCheckoutMinutes(long totalEarlyCheckoutMinutes) {
+        this.totalEarlyCheckoutMinutes = totalEarlyCheckoutMinutes;
     }
 }
