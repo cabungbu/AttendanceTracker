@@ -12,7 +12,7 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 
 @Entity
@@ -23,8 +23,8 @@ public class Complain {
     @GeneratedValue
     private UUID id;
 
-    @ManyToOne
-    @JoinColumn(name = "attendance_id", nullable = false)
+    @OneToOne
+    @JoinColumn(name = "attendance_id", referencedColumnName = "id", nullable=false)
     @JsonBackReference
     private Attendance attendance;
     
