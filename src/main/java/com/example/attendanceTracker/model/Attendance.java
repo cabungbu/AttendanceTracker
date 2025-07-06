@@ -3,7 +3,7 @@ package com.example.attendanceTracker.model;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-import com.example.AttendanceTracker.model.AttendanceStatus;
+import com.example.attendanceTracker.model.AttendanceStatus;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 
 import jakarta.persistence.CascadeType;

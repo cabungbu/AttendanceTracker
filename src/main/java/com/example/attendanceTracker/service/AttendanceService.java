@@ -20,12 +20,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.example.AttendanceTracker.model.AttendanceStatus;
 import com.example.attendanceTracker.DTO.AttendanceReportDTO;
 import com.example.attendanceTracker.DTO.AttendanceWithStatsDTO;
 import com.example.attendanceTracker.DTO.CheckInDTO;
 import com.example.attendanceTracker.DTO.CheckOutDTO;
 import com.example.attendanceTracker.model.Attendance;
+import com.example.attendanceTracker.model.AttendanceStatus;
 import com.example.attendanceTracker.model.User;
 import com.example.attendanceTracker.repository.AttendanceRepository;
 import com.example.attendanceTracker.repository.ComplainRepository;
