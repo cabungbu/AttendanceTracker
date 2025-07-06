@@ -23,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.example.AttendanceTracker.model.AttendanceStatus;
 import com.example.attendanceTracker.DTO.AttendanceReportDTO;
+import com.example.attendanceTracker.DTO.AttendanceWithStatsDTO;
 import com.example.attendanceTracker.DTO.CheckInDTO;
 import com.example.attendanceTracker.DTO.CheckOutDTO;
 import com.example.attendanceTracker.model.Attendance;
@@ -189,6 +190,53 @@ public class AttendanceService {
         // Gán trạng thái trước khi trả
         records.forEach(this::assignStatus);
         return records;
+    }
+
+    public AttendanceWithStatsDTO getMyAttendanceWithStats(User user, LocalDate from, LocalDate to) {
+        List<Attendance> records;
+
+        if (from != null && to != null) {
+            LocalDateTime fromTime = from.atStartOfDay();
+            LocalDateTime toTime = to.atTime(LocalTime.MAX);
+            records = attendanceRepository.findByUserAndCheckInBetween(user, fromTime, toTime);
+        } else if (from != null) {
+            LocalDateTime fromTime = from.atStartOfDay();
+            records = attendanceRepository.findByUserAndCheckInAfter(user, fromTime);
+        } else if (to != null) {
+            LocalDateTime toTime = to.atTime(LocalTime.MAX);
+            records = attendanceRepository.findByUserAndCheckInBefore(user, toTime);
+        } else {
+            records = attendanceRepository.findByUser(user);
+        }
+
+        records.forEach(this::assignStatus);
+
+        int presentDays = records.size();
+        double totalHours = 0;
+        int violationDays = 0;
+
+        for (Attendance att : records) {
+            if (att.getCheckIn() != null && att.getCheckOut() != null) {
+                long minutes = ChronoUnit.MINUTES.between(att.getCheckIn(), att.getCheckOut());
+                totalHours += minutes / 60.0;
+            }
+
+            String status = att.getStatus().name();
+            if ("LATE".equals(status) || "EARLY_LEAVE".equals(status) || "NO_CHECKOUT".equals(status)) {
+                violationDays++;
+            }
+        }
+
+        double averageHours = presentDays > 0 ? totalHours / presentDays : 0;
+
+        AttendanceWithStatsDTO result = new AttendanceWithStatsDTO();
+        result.setRecords(records);
+        result.setTotalHours(Math.round(totalHours * 100.0) / 100.0);
+        result.setAverageHoursPerDay(Math.round(averageHours * 100.0) / 100.0);
+        result.setPresentDays(presentDays);
+        result.setViolationDays(violationDays);
+
+        return result;
     }
 
     public Attendance findById(UUID id) {

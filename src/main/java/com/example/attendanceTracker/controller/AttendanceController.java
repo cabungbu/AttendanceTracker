@@ -9,6 +9,7 @@ import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -23,6 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.example.attendanceTracker.DTO.AttendanceReportDTO;
+import com.example.attendanceTracker.DTO.AttendanceWithStatsDTO;
 import com.example.attendanceTracker.DTO.CheckInDTO;
 import com.example.attendanceTracker.DTO.CheckOutDTO;
 import com.example.attendanceTracker.DTO.UpdateAttendanceDTO;
@@ -108,14 +110,27 @@ public class AttendanceController {
     public ResponseEntity<List<Attendance>> monthlyReport(
             @RequestParam int year,
             @RequestParam int month,
-            @RequestParam(required = false) String email,
+            @RequestParam(required = false) UUID userId,
             Authentication auth) {
-        String currentUserEmail = extractEmailFromAuth(auth);
-        
-        User user = userService.findByEmail(
-            auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_admin"))
-                ? (email != null ? email : currentUserEmail)
-                : currentUserEmail);
+
+        User user;
+
+        if (userId != null) {
+            // Chỉ admin được truy cập userId khác
+            boolean isAdmin = auth.getAuthorities().stream()
+                    .anyMatch(a -> a.getAuthority().equals("ROLE_admin"));
+
+            if (!isAdmin) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            }
+
+            user = userService.findById(userId);
+        } else {
+            // Nếu không có userId, lấy từ token (staff tự xem mình)
+            String email = extractEmailFromAuth(auth);
+            user = userService.findByEmail(email);
+        }
+
         return ResponseEntity.ok(attendanceService.getMonthlyReport(user, year, month));
     }
 
@@ -123,17 +138,32 @@ public class AttendanceController {
     @PreAuthorize("hasAnyRole('staff','admin')")
     public ResponseEntity<List<Attendance>> yearlyReport(
             @RequestParam int year,
-            @RequestParam(required = false) String email,
+            @RequestParam(required = false) UUID userId,
             Authentication auth) {
-        String currentUserEmail = extractEmailFromAuth(auth);
-        
-        User user = userService.findByEmail(
-            auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_admin"))
-                ? (email != null ? email : currentUserEmail)
-                : currentUserEmail);
-        return ResponseEntity.ok(attendanceService.getYearlyReport(user, year));
+
+        User user;
+
+        if (userId != null) {
+            // Chỉ admin mới được dùng userId
+            boolean isAdmin = auth.getAuthorities().stream()
+                    .anyMatch(a -> a.getAuthority().equals("ROLE_admin"));
+
+            if (!isAdmin) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(null);
+            }
+
+            user = userService.findById(userId);
+        } else {
+            // Lấy từ token
+            String email = extractEmailFromAuth(auth);
+            user = userService.findByEmail(email);
+        }
+
+        List<Attendance> result = attendanceService.getYearlyReport(user, year);
+        return ResponseEntity.ok(result);
     }
-    
+
     // Lấy chi tiết một bản ghi attendance
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('staff','admin')")
@@ -156,7 +186,19 @@ public class AttendanceController {
     public ResponseEntity<Page<Attendance>> getAllAttendance(
             Pageable pageable,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            @RequestParam(required = false) Integer year,
+            @RequestParam(required = false) Integer month
+    ) {
+        // Ưu tiên xử lý theo năm/tháng nếu được truyền
+        if (year != null && month != null) {
+            from = LocalDate.of(year, month, 1);
+            to = from.plusMonths(1).minusDays(1);
+        } else if (year != null) {
+            from = LocalDate.of(year, 1, 1);
+            to = LocalDate.of(year, 12, 31);
+        }
+
         return ResponseEntity.ok(attendanceService.getAllAttendance(pageable, from, to));
     }
     
@@ -174,15 +216,18 @@ public class AttendanceController {
     // Lấy danh sách attendance của tài khoản hiện tại
     @GetMapping("/me")
     @PreAuthorize("hasAnyRole('staff','admin')")
-    public ResponseEntity<Page<Attendance>> getMyAttendance(
+    public ResponseEntity<AttendanceWithStatsDTO> getMyAttendance(
             Authentication auth,
-            Pageable pageable,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+
         String email = extractEmailFromAuth(auth);
         User user = userService.findByEmail(email);
-        
-        return ResponseEntity.ok(attendanceService.getMyAttendance(user, pageable, from, to));
+
+        // Gọi service mới trả về records + stats
+        AttendanceWithStatsDTO response = attendanceService.getMyAttendanceWithStats(user, from, to);
+
+        return ResponseEntity.ok(response);
     }
     
     // Lọc attendance theo trạng thái

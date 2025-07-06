@@ -1,5 +1,6 @@
 package com.example.attendanceTracker.repository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -18,4 +19,5 @@ public interface UserRepository extends JpaRepository<User, UUID> {
         String name, String email, Pageable pageable
     );
     Page<User> findByIsDeletedFalseOrIsDeletedIsNull(Pageable pageable);
+    List<User> findByIsDeletedFalseOrIsDeletedIsNull();
 }
