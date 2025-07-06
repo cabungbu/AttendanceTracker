@@ -1,18 +1,21 @@
 package com.example.attendanceTracker.model;
 
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.UUID;
 
+import com.example.AttendanceTracker.model.AttendanceStatus;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToMany;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 
 @Entity
@@ -33,10 +36,12 @@ public class Attendance {
     private String checkInImageUrl;
     private String checkOutImageUrl;
     
-    @OneToMany(mappedBy = "attendance", fetch = FetchType.LAZY)
+    @OneToOne(mappedBy = "attendance", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
     @JsonManagedReference
-    private List<Complain> complains;
+    private Complain complain;
 
+    @Enumerated(EnumType.STRING)
+    private AttendanceStatus status;
     // === GETTERS ===
 
     public UUID getId() {
@@ -63,8 +68,12 @@ public class Attendance {
         return checkOutImageUrl;
     }
     
-    public List<Complain> getComplains() {
-        return complains;
+    public Complain getComplain() {
+        return complain;
+    }
+
+    public AttendanceStatus getStatus() {
+        return status;
     }
 
     // === SETTERS ===
@@ -93,7 +102,11 @@ public class Attendance {
         this.checkOutImageUrl = checkOutImageUrl;
     }
     
-    public void setComplains(List<Complain> complains) {
-        this.complains = complains;
+    public void setComplain(Complain complain) {
+        this.complain = complain;
+    }
+
+    public void setStatus(AttendanceStatus status) {
+        this.status = status;
     }
 }

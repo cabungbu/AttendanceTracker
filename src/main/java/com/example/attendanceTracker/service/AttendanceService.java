@@ -20,7 +20,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.example.AttendanceTracker.model.AttendanceStatus;
 import com.example.attendanceTracker.DTO.AttendanceReportDTO;
+import com.example.attendanceTracker.DTO.AttendanceWithStatsDTO;
 import com.example.attendanceTracker.DTO.CheckInDTO;
 import com.example.attendanceTracker.DTO.CheckOutDTO;
 import com.example.attendanceTracker.model.Attendance;
@@ -168,22 +170,74 @@ public class AttendanceService {
 
     // Lấy danh sách attendance của user với filter theo ngày (without pagination - kept for backward compatibility)
     public List<Attendance> getMyAttendance(User user, LocalDate from, LocalDate to) {
+        List<Attendance> records;
+
         if (from != null && to != null) {
             LocalDateTime fromTime = from.atStartOfDay();
             LocalDateTime toTime = to.atTime(LocalTime.MAX);
-            return attendanceRepository.findByUserAndCheckInBetween(user, fromTime, toTime);
+            records = attendanceRepository.findByUserAndCheckInBetween(user, fromTime, toTime);
         } else if (from != null) {
             LocalDateTime fromTime = from.atStartOfDay();
-            return attendanceRepository.findByUserAndCheckInAfter(user, fromTime);
+            records = attendanceRepository.findByUserAndCheckInAfter(user, fromTime);
         } else if (to != null) {
             LocalDateTime toTime = to.atTime(LocalTime.MAX);
-            return attendanceRepository.findByUserAndCheckInBefore(user, toTime);
+            records = attendanceRepository.findByUserAndCheckInBefore(user, toTime);
         } else {
-            // Nếu không có filter, lấy tất cả attendance của user
-            return attendanceRepository.findByUser(user);
+            records = attendanceRepository.findByUser(user);
         }
+
+        // Gán trạng thái trước khi trả
+        records.forEach(this::assignStatus);
+        return records;
     }
-    
+
+    public AttendanceWithStatsDTO getMyAttendanceWithStats(User user, LocalDate from, LocalDate to) {
+        List<Attendance> records;
+
+        if (from != null && to != null) {
+            LocalDateTime fromTime = from.atStartOfDay();
+            LocalDateTime toTime = to.atTime(LocalTime.MAX);
+            records = attendanceRepository.findByUserAndCheckInBetween(user, fromTime, toTime);
+        } else if (from != null) {
+            LocalDateTime fromTime = from.atStartOfDay();
+            records = attendanceRepository.findByUserAndCheckInAfter(user, fromTime);
+        } else if (to != null) {
+            LocalDateTime toTime = to.atTime(LocalTime.MAX);
+            records = attendanceRepository.findByUserAndCheckInBefore(user, toTime);
+        } else {
+            records = attendanceRepository.findByUser(user);
+        }
+
+        records.forEach(this::assignStatus);
+
+        int presentDays = records.size();
+        double totalHours = 0;
+        int violationDays = 0;
+
+        for (Attendance att : records) {
+            if (att.getCheckIn() != null && att.getCheckOut() != null) {
+                long minutes = ChronoUnit.MINUTES.between(att.getCheckIn(), att.getCheckOut());
+                totalHours += minutes / 60.0;
+            }
+
+            String status = att.getStatus().name();
+            if ("LATE".equals(status) || "EARLY_LEAVE".equals(status) || "NO_CHECKOUT".equals(status)) {
+                violationDays++;
+            }
+        }
+
+        double averageHours = presentDays > 0 ? totalHours / presentDays : 0;
+
+        AttendanceWithStatsDTO result = new AttendanceWithStatsDTO();
+        result.setRecords(records);
+        result.setTotalHours(Math.round(totalHours * 100.0) / 100.0);
+        result.setAverageHoursPerDay(Math.round(averageHours * 100.0) / 100.0);
+        result.setPresentDays(presentDays);
+        result.setViolationDays(violationDays);
+
+        return result;
+    }
+
     public Attendance findById(UUID id) {
         return attendanceRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy bản ghi điểm danh"));
@@ -447,6 +501,30 @@ public class AttendanceService {
         return attendanceRepository.save(existingAttendance);
     }
     
+    private void assignStatus(Attendance attendance) {
+        if (attendance.getCheckIn() == null) {
+            attendance.setStatus(AttendanceStatus.ABSENT);
+            return;
+        }
+
+        if (attendance.getCheckOut() == null) {
+            attendance.setStatus(AttendanceStatus.NO_CHECKOUT);
+            return;
+        }
+
+        LocalTime in = attendance.getCheckIn().toLocalTime();
+        LocalTime out = attendance.getCheckOut().toLocalTime();
+
+        if (in.isAfter(LocalTime.of(8, 0))) {
+            attendance.setStatus(AttendanceStatus.LATE);
+        } else if (out.isBefore(LocalTime.of(17, 0))) {
+            attendance.setStatus(AttendanceStatus.EARLY_LEAVE);
+        } else {
+            attendance.setStatus(AttendanceStatus.COMPLETED);
+        }
+    }
+
+
     // Các phương thức hỗ trợ cho export báo cáo (hiện đã vô hiệu hóa)
     /**
      * @deprecated This method is no longer used as the Excel export functionality has been removed

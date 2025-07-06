@@ -43,6 +43,10 @@ public class ComplainService {
         Attendance attendance = attendanceRepository.findById(dto.getAttendanceId())
                 .orElseThrow(() -> new RuntimeException("Attendance record not found"));
         
+        if (attendance.getComplain() != null) {
+            throw new RuntimeException("Bạn đã gửi khiếu nại cho bản ghi này rồi");
+        }
+
         // Check if the attendance belongs to the user
         if (!attendance.getUser().getId().equals(user.getId())) {
             throw new RuntimeException("You can only create complaints for your own attendance records");
@@ -60,7 +64,7 @@ public class ComplainService {
                     "complain_" + user.getId() + "_" + System.currentTimeMillis());
             complain.setComplainImageUrl(imageUrl);
         }
-        
+        attendance.setComplain(complain);
         return complainRepository.save(complain);
     }
     

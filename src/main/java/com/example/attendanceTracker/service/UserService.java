@@ -39,7 +39,7 @@ public class UserService {
     }
 
     public List<User> findAll() {
-        return userRepository.findAll();
+        return userRepository.findByIsDeletedFalseOrIsDeletedIsNull();
     }
 
     public Page<User> listUsers(Pageable pageable, String search) {
