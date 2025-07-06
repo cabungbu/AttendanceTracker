@@ -29,11 +29,11 @@ public class UserService {
 
     public User getUserByJwt(Jwt jwt) {
         String email = jwt.getClaimAsString("email");
-        return userRepository.findByEmail(email)
+        return userRepository.findByEmailAndIsDeletedFalseOrIsDeletedIsNull(email)
             .orElseThrow(() ->
             new ResponseStatusException(
                 HttpStatus.NOT_FOUND,
-                "Không tìm thấy user với email: " + email
+                "Không tìm thấy user hoặc user đã bị xóa với email: " + email
             )
         );
     }
@@ -60,6 +60,16 @@ public class UserService {
         );
     }
 
+    public User findByEmailExcludeDeleted(String email) {
+        return userRepository.findByEmailAndIsDeletedFalseOrIsDeletedIsNull(email)
+            .orElseThrow(() ->
+            new ResponseStatusException(
+                HttpStatus.NOT_FOUND,
+                "Không tìm thấy user hoặc user đã bị xóa với email: " + email
+            )
+        );
+    }
+
     public User update(User user) {
         return userRepository.save(user);
     }
@@ -69,6 +79,14 @@ public class UserService {
             .orElseThrow(() ->  new ResponseStatusException(
                 HttpStatus.NOT_FOUND,
                 "Không tìm thấy user với id: " + id)
+            );
+    }
+
+    public User findByIdExcludeDeleted(UUID id) {
+        return userRepository.findByIdAndIsDeletedFalseOrIsDeletedIsNull(id)
+            .orElseThrow(() ->  new ResponseStatusException(
+                HttpStatus.NOT_FOUND,
+                "Không tìm thấy user hoặc user đã bị xóa với id: " + id)
             );
     }
 

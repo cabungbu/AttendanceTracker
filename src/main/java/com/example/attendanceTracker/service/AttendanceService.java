@@ -5,7 +5,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -194,15 +193,15 @@ public class AttendanceService {
         if (from != null && to != null) {
             LocalDateTime fromTime = from.atStartOfDay();
             LocalDateTime toTime = to.atTime(LocalTime.MAX);
-            return attendanceRepository.findByCheckInBetween(fromTime, toTime);
+            return attendanceRepository.findByCheckInBetweenAndUserIsDeletedFalseOrUserIsDeletedIsNull(fromTime, toTime);
         } else if (from != null) {
             LocalDateTime fromTime = from.atStartOfDay();
-            return attendanceRepository.findByCheckInAfter(fromTime);
+            return attendanceRepository.findByCheckInAfterAndUserIsDeletedFalseOrUserIsDeletedIsNull(fromTime);
         } else if (to != null) {
             LocalDateTime toTime = to.atTime(LocalTime.MAX);
-            return attendanceRepository.findByCheckInBefore(toTime);
+            return attendanceRepository.findByCheckInBeforeAndUserIsDeletedFalseOrUserIsDeletedIsNull(toTime);
         } else {
-            return attendanceRepository.findAll();
+            return attendanceRepository.findByUserIsDeletedFalseOrUserIsDeletedIsNull();
         }
     }
 
@@ -210,15 +209,15 @@ public class AttendanceService {
         if (from != null && to != null) {
             LocalDateTime fromTime = from.atStartOfDay();
             LocalDateTime toTime = to.atTime(LocalTime.MAX);
-            return attendanceRepository.findByCheckInBetween(fromTime, toTime, pageable);
+            return attendanceRepository.findByCheckInBetweenAndUserIsDeletedFalseOrUserIsDeletedIsNull(fromTime, toTime, pageable);
         } else if (from != null) {
             LocalDateTime fromTime = from.atStartOfDay();
-            return attendanceRepository.findByCheckInAfter(fromTime, pageable);
+            return attendanceRepository.findByCheckInAfterAndUserIsDeletedFalseOrUserIsDeletedIsNull(fromTime, pageable);
         } else if (to != null) {
             LocalDateTime toTime = to.atTime(LocalTime.MAX);
-            return attendanceRepository.findByCheckInBefore(toTime, pageable);
+            return attendanceRepository.findByCheckInBeforeAndUserIsDeletedFalseOrUserIsDeletedIsNull(toTime, pageable);
         } else {
-            return attendanceRepository.findAll(pageable);
+            return attendanceRepository.findByUserIsDeletedFalseOrUserIsDeletedIsNull(pageable);
         }
     }
 
@@ -226,27 +225,27 @@ public class AttendanceService {
         if (from != null && to != null) {
             LocalDateTime fromTime = from.atStartOfDay();
             LocalDateTime toTime = to.atTime(LocalTime.MAX);
-            return attendanceRepository.findByCheckInBetween(fromTime, toTime);
+            return attendanceRepository.findByCheckInBetweenAndUserIsDeletedFalseOrUserIsDeletedIsNull(fromTime, toTime);
         } else if (from != null) {
             LocalDateTime fromTime = from.atStartOfDay();
-            return attendanceRepository.findByCheckInAfter(fromTime);
+            return attendanceRepository.findByCheckInAfterAndUserIsDeletedFalseOrUserIsDeletedIsNull(fromTime);
         } else if (to != null) {
             LocalDateTime toTime = to.atTime(LocalTime.MAX);
-            return attendanceRepository.findByCheckInBefore(toTime);
+            return attendanceRepository.findByCheckInBeforeAndUserIsDeletedFalseOrUserIsDeletedIsNull(toTime);
         } else {
-            return attendanceRepository.findAll();
+            return attendanceRepository.findByUserIsDeletedFalseOrUserIsDeletedIsNull();
         }
     }
     
     public List<Attendance> filterAttendance(Boolean checkedIn, Boolean checkedOut, UUID userId) {
-        List<Attendance> result = new ArrayList<>();
+        List<Attendance> result;
         
         if (userId != null) {
-            User user = userRepository.findById(userId)
-                    .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
+            User user = userRepository.findByIdAndIsDeletedFalseOrIsDeletedIsNull(userId)
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng hoặc người dùng đã bị xóa"));
             result = attendanceRepository.findByUser(user);
         } else {
-            result = attendanceRepository.findAll();
+            result = attendanceRepository.findByUserIsDeletedFalseOrUserIsDeletedIsNull();
         }
         
         // Lọc theo trạng thái checkedIn/checkedOut
@@ -412,6 +411,7 @@ public class AttendanceService {
         return complainRepository.findAll().stream()
                 .map(complain -> complain.getAttendance())
                 .distinct()
+                .filter(attendance -> !attendance.getUser().getIsDeleted()) // Filter out deleted users
                 .collect(Collectors.toList());
     }
     

@@ -60,7 +60,7 @@ public class UserController {
         @RequestBody UpdateUserDTO updated) {
         Jwt jwt = auth.getToken();
         String email = jwt.getClaimAsString("email");
-        User user = userService.findByEmail(email);
+        User user = userService.findByEmailExcludeDeleted(email);
         User savedUser = userService.updateUser(user.getId(), updated);
     return ResponseEntity.ok(savedUser);
 }

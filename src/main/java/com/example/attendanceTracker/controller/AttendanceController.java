@@ -56,7 +56,7 @@ public class AttendanceController {
             @RequestParam(value = "checkInImage", required = false) MultipartFile checkInImage) {
         try {
             String email = extractEmailFromAuth(auth);
-            User user = userService.findByEmail(email);
+            User user = userService.findByEmailExcludeDeleted(email);
             CheckInDTO checkInDto = new CheckInDTO();
             checkInDto.setCheckInImage(checkInImage);
             
@@ -83,7 +83,7 @@ public class AttendanceController {
             @RequestParam(value = "checkOutImage", required = false) MultipartFile checkOutImage) {
         try {
             String email = extractEmailFromAuth(auth);
-            User user = userService.findByEmail(email);
+            User user = userService.findByEmailExcludeDeleted(email);
             CheckOutDTO checkOutDto = new CheckOutDTO();
             checkOutDto.setCheckOutImage(checkOutImage);
             
@@ -112,7 +112,7 @@ public class AttendanceController {
             Authentication auth) {
         String currentUserEmail = extractEmailFromAuth(auth);
         
-        User user = userService.findByEmail(
+        User user = userService.findByEmailExcludeDeleted(
             auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_admin"))
                 ? (email != null ? email : currentUserEmail)
                 : currentUserEmail);
@@ -127,7 +127,7 @@ public class AttendanceController {
             Authentication auth) {
         String currentUserEmail = extractEmailFromAuth(auth);
         
-        User user = userService.findByEmail(
+        User user = userService.findByEmailExcludeDeleted(
             auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_admin"))
                 ? (email != null ? email : currentUserEmail)
                 : currentUserEmail);
@@ -168,6 +168,8 @@ public class AttendanceController {
             Pageable pageable,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        // Kiểm tra user có bị xóa không
+        userService.findByIdExcludeDeleted(userId);
         return ResponseEntity.ok(attendanceService.getAttendanceByUserId(userId, pageable, from, to));
     }
     
@@ -180,7 +182,7 @@ public class AttendanceController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
         String email = extractEmailFromAuth(auth);
-        User user = userService.findByEmail(email);
+        User user = userService.findByEmailExcludeDeleted(email);
         
         return ResponseEntity.ok(attendanceService.getMyAttendance(user, pageable, from, to));
     }
@@ -192,6 +194,10 @@ public class AttendanceController {
             @RequestParam(required = false) Boolean checkedIn,
             @RequestParam(required = false) Boolean checkedOut,
             @RequestParam(required = false) UUID userId) {
+        // Kiểm tra user có bị xóa không nếu userId được cung cấp
+        if (userId != null) {
+            userService.findByIdExcludeDeleted(userId);
+        }
         return ResponseEntity.ok(attendanceService.filterAttendance(checkedIn, checkedOut, userId));
     }
     
@@ -207,11 +213,13 @@ public class AttendanceController {
         UUID userIdToUse;
         
         if (userId != null && auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_admin"))) {
+            // Kiểm tra user có bị xóa không
+            userService.findByIdExcludeDeleted(userId);
             userIdToUse = userId; // Admin có thể xem báo cáo của bất kỳ user nào
         } else {
             // Nếu không phải admin hoặc admin không chỉ định user, lấy thông tin user từ token
             String currentUserEmail = extractEmailFromAuth(auth);
-            User user = userService.findByEmail(currentUserEmail);
+            User user = userService.findByEmailExcludeDeleted(currentUserEmail);
             userIdToUse = user.getId();
         }
         
@@ -229,11 +237,13 @@ public class AttendanceController {
         UUID userIdToUse;
         
         if (userId != null && auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_admin"))) {
+            // Kiểm tra user có bị xóa không
+            userService.findByIdExcludeDeleted(userId);
             userIdToUse = userId; // Admin có thể xem báo cáo của bất kỳ user nào
         } else {
             // Nếu không phải admin hoặc admin không chỉ định user, lấy thông tin user từ token
             String currentUserEmail = extractEmailFromAuth(auth);
-            User user = userService.findByEmail(currentUserEmail);
+            User user = userService.findByEmailExcludeDeleted(currentUserEmail);
             userIdToUse = user.getId();
         }
         
@@ -250,10 +260,12 @@ public class AttendanceController {
             Authentication auth) {
         UUID userIdToUse;
         if (userId != null && auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_admin"))) {
+            // Kiểm tra user có bị xóa không
+            userService.findByIdExcludeDeleted(userId);
             userIdToUse = userId;
         } else {
             String currentUserEmail = extractEmailFromAuth(auth);
-            User user = userService.findByEmail(currentUserEmail);
+            User user = userService.findByEmailExcludeDeleted(currentUserEmail);
             userIdToUse = user.getId();
         }
         return ResponseEntity.ok(attendanceService.getSummaryByPeriod(userIdToUse, from, to));
@@ -318,7 +330,7 @@ public class AttendanceController {
     @PreAuthorize("hasAnyRole('staff','admin')")
     public ResponseEntity<Map<String, Object>> getTodayStatus(Authentication auth) {
         String email = extractEmailFromAuth(auth);
-        User user = userService.findByEmail(email);
+        User user = userService.findByEmailExcludeDeleted(email);
         
         return attendanceService.getTodayAttendanceStatus(user);
     }

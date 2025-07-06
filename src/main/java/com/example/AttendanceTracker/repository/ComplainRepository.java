@@ -21,4 +21,9 @@ public interface ComplainRepository extends JpaRepository<Complain, UUID> {
     List<Complain> findByAttendance_User(User user);
     List<Complain> findByAttendance_UserAndStatus(User user, StatusComplain status);
     Page<Complain> findByCreatedAtBetween(LocalDateTime start, LocalDateTime end, Pageable pageable);
+    
+    // Methods excluding deleted users
+    List<Complain> findByAttendance_UserIsDeletedFalseOrAttendance_UserIsDeletedIsNull();
+    List<Complain> findByStatusAndAttendance_UserIsDeletedFalseOrAttendance_UserIsDeletedIsNull(StatusComplain status);
+    Page<Complain> findByCreatedAtBetweenAndAttendance_UserIsDeletedFalseOrAttendance_UserIsDeletedIsNull(LocalDateTime start, LocalDateTime end, Pageable pageable);
 }

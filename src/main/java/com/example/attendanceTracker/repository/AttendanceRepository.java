@@ -39,4 +39,16 @@ public interface AttendanceRepository extends JpaRepository<Attendance, UUID> {
     // Alternative method to find attendance for a specific date
     @Query("SELECT a FROM Attendance a WHERE a.user = :user AND a.checkIn >= :startOfDay AND a.checkIn < :endOfDay")
     Optional<Attendance> findByUserAndDate(@Param("user") User user, @Param("startOfDay") LocalDateTime startOfDay, @Param("endOfDay") LocalDateTime endOfDay);
+    
+    // Methods excluding deleted users
+    List<Attendance> findByCheckInBetweenAndUserIsDeletedFalseOrUserIsDeletedIsNull(LocalDateTime start, LocalDateTime end);
+    List<Attendance> findByCheckInAfterAndUserIsDeletedFalseOrUserIsDeletedIsNull(LocalDateTime from);
+    List<Attendance> findByCheckInBeforeAndUserIsDeletedFalseOrUserIsDeletedIsNull(LocalDateTime to);
+    List<Attendance> findByUserIsDeletedFalseOrUserIsDeletedIsNull();
+    
+    // Pagination methods excluding deleted users
+    Page<Attendance> findByCheckInBetweenAndUserIsDeletedFalseOrUserIsDeletedIsNull(LocalDateTime start, LocalDateTime end, Pageable pageable);
+    Page<Attendance> findByCheckInAfterAndUserIsDeletedFalseOrUserIsDeletedIsNull(LocalDateTime from, Pageable pageable);
+    Page<Attendance> findByCheckInBeforeAndUserIsDeletedFalseOrUserIsDeletedIsNull(LocalDateTime to, Pageable pageable);
+    Page<Attendance> findByUserIsDeletedFalseOrUserIsDeletedIsNull(Pageable pageable);
 }

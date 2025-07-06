@@ -3,6 +3,7 @@ package com.example.attendanceTracker.service;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -10,6 +11,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.example.attendanceTracker.DTO.AttendanceDTO;
+import com.example.attendanceTracker.DTO.ComplainResponseDTO;
 import com.example.attendanceTracker.DTO.CreateComplainDTO;
 import com.example.attendanceTracker.DTO.UpdateComplainDTO;
 import com.example.attendanceTracker.DTO.UpdateComplainStatusDTO;
@@ -66,13 +69,20 @@ public class ComplainService {
     }
     
     public List<Complain> getComplainsByStatus(StatusComplain status) {
-        return complainRepository.findByStatus(status);
+        return complainRepository.findByStatusAndAttendance_UserIsDeletedFalseOrAttendance_UserIsDeletedIsNull(status);
     }
     
     public List<Complain> getComplainsByAttendance(UUID attendanceId) {
         Attendance attendance = attendanceRepository.findById(attendanceId)
-                .orElseThrow(() -> new RuntimeException("Attendance record not found"));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy bản ghi điểm danh"));
         return complainRepository.findByAttendance(attendance);
+    }
+
+    public List<ComplainResponseDTO> getComplainsByAttendanceAsDTO(UUID attendanceId) {
+        return getComplainsByAttendance(attendanceId).stream()
+                .filter(complain -> !complain.getAttendance().getUser().getIsDeleted()) // Filter deleted users
+                .map(this::convertToResponseDTO)
+                .collect(Collectors.toList());
     }
     
     @Transactional
@@ -90,6 +100,11 @@ public class ComplainService {
                 .orElseThrow(() -> new RuntimeException("Complain not found"));
     }
     
+    public ComplainResponseDTO getComplainByIdAsDTO(UUID id) {
+        Complain complain = getComplainById(id);
+        return convertToResponseDTO(complain);
+    }
+    
     @Transactional
     public void deleteComplain(UUID id, User user) {
         Complain complain = complainRepository.findById(id)
@@ -105,7 +120,7 @@ public class ComplainService {
     }
     
     public List<Complain> getAllComplaints() {
-        return complainRepository.findAll();
+        return complainRepository.findByAttendance_UserIsDeletedFalseOrAttendance_UserIsDeletedIsNull();
     }
     
     @Transactional
@@ -180,10 +195,62 @@ public class ComplainService {
         return complainRepository.save(complain);
     }
 
-   public Page<Complain> getComplainsByMonthAndYear(int year, int month, Pageable pageable) {
+    public Page<Complain> getComplainsByMonthAndYear(int year, int month, Pageable pageable) {
         LocalDateTime start = LocalDateTime.of(year, month, 1, 0, 0);
         LocalDateTime end = start.plusMonths(1);
-        return complainRepository.findByCreatedAtBetween(start, end, pageable);
+        return complainRepository.findByCreatedAtBetweenAndAttendance_UserIsDeletedFalseOrAttendance_UserIsDeletedIsNull(start, end, pageable);
+    }
+
+    // Convert Complain to ComplainResponseDTO
+    public ComplainResponseDTO convertToResponseDTO(Complain complain) {
+        ComplainResponseDTO dto = new ComplainResponseDTO();
+        dto.setId(complain.getId());
+        dto.setContent(complain.getContent());
+        dto.setStatus(complain.getStatus());
+        dto.setComplainImageUrl(complain.getComplainImageUrl());
+        dto.setCreatedAt(complain.getCreatedAt());
+        
+        // Convert Attendance to AttendanceDTO
+        if (complain.getAttendance() != null) {
+            AttendanceDTO attendanceDTO = new AttendanceDTO();
+            attendanceDTO.setId(complain.getAttendance().getId());
+            attendanceDTO.setUser(complain.getAttendance().getUser());
+            attendanceDTO.setCheckIn(complain.getAttendance().getCheckIn());
+            attendanceDTO.setCheckOut(complain.getAttendance().getCheckOut());
+            attendanceDTO.setCheckInImageUrl(complain.getAttendance().getCheckInImageUrl());
+            attendanceDTO.setCheckOutImageUrl(complain.getAttendance().getCheckOutImageUrl());
+            
+            dto.setAttendance(attendanceDTO);
+        }
+        
+        return dto;
+    }
+
+    // Get all complaints as DTO
+    public List<ComplainResponseDTO> getAllComplaintsAsDTO() {
+        return getAllComplaints().stream()
+                .map(this::convertToResponseDTO)
+                .collect(Collectors.toList());
+    }
+
+    // Get complaints by status as DTO
+    public List<ComplainResponseDTO> getComplainsByStatusAsDTO(StatusComplain status) {
+        return getComplainsByStatus(status).stream()
+                .map(this::convertToResponseDTO)
+                .collect(Collectors.toList());
+    }
+
+    // Get complaints by user as DTO
+    public List<ComplainResponseDTO> getComplainsByUserAsDTO(User user) {
+        return getComplainsByUser(user).stream()
+                .map(this::convertToResponseDTO)
+                .collect(Collectors.toList());
+    }
+
+    // Get complaints by month and year as DTO
+    public Page<ComplainResponseDTO> getComplainsByMonthAndYearAsDTO(int year, int month, Pageable pageable) {
+        Page<Complain> complainsPage = getComplainsByMonthAndYear(year, month, pageable);
+        return complainsPage.map(this::convertToResponseDTO);
     }
 
 }

@@ -23,6 +23,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.example.attendanceTracker.DTO.ComplainResponseDTO;
 import com.example.attendanceTracker.DTO.CreateComplainDTO;
 import com.example.attendanceTracker.DTO.UpdateComplainDTO;
 import com.example.attendanceTracker.DTO.UpdateComplainStatusDTO;
@@ -62,7 +63,7 @@ public class ComplainController {
             @RequestParam String content,
             @RequestParam(value = "complainImage", required = false) MultipartFile complainImage,
             Authentication auth) {
-        User user = userService.findByEmail(extractEmailFromAuth(auth));
+        User user = userService.findByEmailExcludeDeleted(extractEmailFromAuth(auth));
         
         CreateComplainDTO dto = new CreateComplainDTO();
         dto.setAttendanceId(attendanceId);
@@ -76,41 +77,41 @@ public class ComplainController {
     // Lấy danh sách khiếu nại của user đang đăng nhập
     @GetMapping("/my-complains")
     @PreAuthorize("hasAnyRole('staff','admin')")
-    public ResponseEntity<List<Complain>> getMyComplaints(Authentication auth) {
-        User user = userService.findByEmail(extractEmailFromAuth(auth));
-        return ResponseEntity.ok(complainService.getComplainsByUser(user));
+    public ResponseEntity<List<ComplainResponseDTO>> getMyComplaints(Authentication auth) {
+        User user = userService.findByEmailExcludeDeleted(extractEmailFromAuth(auth));
+        return ResponseEntity.ok(complainService.getComplainsByUserAsDTO(user));
     }
     
     // Lấy danh sách tất cả khiếu nại (cho admin)
     @GetMapping("/get-all")
     @PreAuthorize("hasRole('admin')")
-    public ResponseEntity<List<Complain>> getAllComplaints(
+    public ResponseEntity<List<ComplainResponseDTO>> getAllComplaints(
             @RequestParam(required = false) StatusComplain status) {
         if (status != null) {
-            return ResponseEntity.ok(complainService.getComplainsByStatus(status));
+            return ResponseEntity.ok(complainService.getComplainsByStatusAsDTO(status));
         }
-        return ResponseEntity.ok(complainService.getAllComplaints());
+        return ResponseEntity.ok(complainService.getAllComplaintsAsDTO());
     }
 
     @GetMapping("/get-by-month")
     @PreAuthorize("hasRole('admin')")
-    public ResponseEntity<Page<Complain>> getComplainByMonth(
+    public ResponseEntity<Page<ComplainResponseDTO>> getComplainByMonth(
         Pageable pageable,
         @RequestParam int year,
         @RequestParam int month
     ) {
-        return ResponseEntity.ok(complainService.getComplainsByMonthAndYear(year, month, pageable));
+        return ResponseEntity.ok(complainService.getComplainsByMonthAndYearAsDTO(year, month, pageable));
     }
 
     
     // Lấy chi tiết 1 khiếu nại
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('staff','admin')")
-    public ResponseEntity<Complain> getComplaintById(@PathVariable UUID id, Authentication auth) {
+    public ResponseEntity<ComplainResponseDTO> getComplaintById(@PathVariable UUID id, Authentication auth) {
         Complain complain = complainService.getComplainById(id);
         
         // Kiểm tra quyền truy cập
-        User user = userService.findByEmail(extractEmailFromAuth(auth));
+        User user = userService.findByEmailExcludeDeleted(extractEmailFromAuth(auth));
         boolean isAdmin = user.getRole().toString().equalsIgnoreCase("admin");
         boolean isOwner = complain.getAttendance().getUser().getId().equals(user.getId());
         
@@ -118,7 +119,7 @@ public class ComplainController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
         
-        return ResponseEntity.ok(complain);
+        return ResponseEntity.ok(complainService.convertToResponseDTO(complain));
     }
     
     // Duyệt hoặc từ chối khiếu nại
@@ -140,7 +141,7 @@ public class ComplainController {
             @RequestParam(required = false) String status,
             @RequestParam(value = "complainImage", required = false) MultipartFile complainImage,
             Authentication auth) {
-        User user = userService.findByEmail(extractEmailFromAuth(auth));
+        User user = userService.findByEmailExcludeDeleted(extractEmailFromAuth(auth));
         
         UpdateComplainDTO dto = new UpdateComplainDTO();
         dto.setContent(content);
@@ -164,7 +165,7 @@ public class ComplainController {
             @PathVariable UUID id,
             @RequestParam(value = "complainImage", required = false) MultipartFile complainImage,
             Authentication auth) {
-        User user = userService.findByEmail(extractEmailFromAuth(auth));
+        User user = userService.findByEmailExcludeDeleted(extractEmailFromAuth(auth));
         Complain complain = complainService.updateComplainImage(id, complainImage, user);
         return ResponseEntity.ok(complain);
     }
@@ -173,7 +174,7 @@ public class ComplainController {
     @DeleteMapping("/delete/{id}")
     @PreAuthorize("hasAnyRole('staff','admin')")
     public ResponseEntity<Void> deleteComplaint(@PathVariable UUID id, Authentication auth) {
-        User user = userService.findByEmail(extractEmailFromAuth(auth));
+        User user = userService.findByEmailExcludeDeleted(extractEmailFromAuth(auth));
         complainService.deleteComplain(id, user);
         return ResponseEntity.noContent().build();
     }
@@ -181,15 +182,15 @@ public class ComplainController {
     // Lấy tất cả khiếu nại liên quan đến 1 bản ghi attendance
     @GetMapping("/by-attendance/{attendanceId}")
     @PreAuthorize("hasRole('admin')")
-    public ResponseEntity<List<Complain>> getComplaintsByAttendance(@PathVariable UUID attendanceId) {
-        return ResponseEntity.ok(complainService.getComplainsByAttendance(attendanceId));
+    public ResponseEntity<List<ComplainResponseDTO>> getComplaintsByAttendance(@PathVariable UUID attendanceId) {
+        return ResponseEntity.ok(complainService.getComplainsByAttendanceAsDTO(attendanceId));
     }
     
     // Thống kê số lượng khiếu nại theo trạng thái
     @GetMapping("/stats")
     @PreAuthorize("hasRole('admin')")
     public ResponseEntity<java.util.Map<StatusComplain, Long>> getComplaintStats() {
-        List<Complain> allComplaints = complainService.getAllComplaints();
+        List<ComplainResponseDTO> allComplaints = complainService.getAllComplaintsAsDTO();
         
         java.util.Map<StatusComplain, Long> stats = new java.util.HashMap<>();
         stats.put(StatusComplain.PENDING, allComplaints.stream()
