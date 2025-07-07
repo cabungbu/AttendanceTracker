@@ -14,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -364,11 +365,29 @@ public class AttendanceController {
         }
     }
     
-    // Endpoint để kiểm tra cấu hình Supabase
     @GetMapping("/test-supabase-config")
     @PreAuthorize("hasRole('admin')")
     public ResponseEntity<Map<String, String>> testSupabaseConfig() {
         return attendanceService.testSupabaseConfig();
+    }
+
+    @DeleteMapping("/delete/{id}")
+    @PreAuthorize("hasRole('admin')")
+    public ResponseEntity<?> deleteAttendance(@PathVariable UUID id) {
+        try {
+            attendanceService.deleteAttendance(id);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "SUCCESS");
+            response.put("message", "Xóa bản ghi điểm danh thành công");
+            
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("status", "ERROR");
+            errorResponse.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(errorResponse);
+        }
     }
 
     @GetMapping("/status")
