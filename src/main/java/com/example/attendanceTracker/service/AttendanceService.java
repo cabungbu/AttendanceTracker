@@ -672,4 +672,18 @@ public class AttendanceService {
         
         return getMyAttendance(user, from, to);
     }
+
+    @Transactional
+    public void deleteAttendance(UUID id) {
+        Attendance attendance = findById(id);
+        
+        if (attendance.getCheckInImageUrl() != null) {
+            fileStorageService.deleteFile(attendance.getCheckInImageUrl());
+        }
+        if (attendance.getCheckOutImageUrl() != null) {
+            fileStorageService.deleteFile(attendance.getCheckOutImageUrl());
+        }
+        
+        attendanceRepository.delete(attendance);
+    }
 }
